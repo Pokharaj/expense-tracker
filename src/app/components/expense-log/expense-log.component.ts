@@ -67,9 +67,9 @@ import { IconComponent } from '../icon/icon.component';
               <thead class="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200/60 dark:border-slate-800">
                 <tr>
                   <th scope="col" class="py-3 px-4 sm:px-6">Date</th>
+                  <th scope="col" class="py-3 px-4 sm:px-6">Amount</th>
                   <th scope="col" class="py-3 px-4 sm:px-6">Category</th>
                   <th scope="col" class="py-3 px-4 sm:px-6">Note / Description</th>
-                  <th scope="col" class="py-3 px-4 sm:px-6">Amount</th>
                   <th scope="col" class="py-3 px-4 sm:px-6 text-right">Actions</th>
                 </tr>
               </thead>
@@ -84,6 +84,9 @@ import { IconComponent } from '../icon/icon.component';
                     <td class="py-3.5 px-4 sm:px-6 text-slate-600 dark:text-slate-400 font-mono text-xs expense-date-cell">
                       {{ item.date }}
                     </td>
+                    <td class="py-3.5 px-4 sm:px-6 font-bold text-slate-900 dark:text-slate-100 expense-amount-cell">
+                      {{ item.amount | inrCurrency }}
+                    </td>
                     <td class="py-3.5 px-4 sm:px-6 font-semibold text-slate-800 dark:text-slate-200 expense-category-cell">
                       <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                         {{ item.category }}
@@ -91,9 +94,6 @@ import { IconComponent } from '../icon/icon.component';
                     </td>
                     <td class="py-3.5 px-4 sm:px-6 text-slate-700 dark:text-slate-300 expense-note-cell">
                       {{ item.note || '-' }}
-                    </td>
-                    <td class="py-3.5 px-4 sm:px-6 font-bold text-slate-900 dark:text-slate-100 expense-amount-cell">
-                      {{ item.amount | inrCurrency }}
                     </td>
                     <td class="py-3.5 px-4 sm:px-6 text-right">
                       <button
@@ -132,9 +132,9 @@ import { IconComponent } from '../icon/icon.component';
               <thead class="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200/60 dark:border-slate-800">
                 <tr>
                   <th scope="col" class="py-3 px-4 sm:px-6">Date</th>
+                  <th scope="col" class="py-3 px-4 sm:px-6">Amount</th>
                   <th scope="col" class="py-3 px-4 sm:px-6">Source</th>
                   <th scope="col" class="py-3 px-4 sm:px-6">Note</th>
-                  <th scope="col" class="py-3 px-4 sm:px-6">Amount</th>
                   <th scope="col" class="py-3 px-4 sm:px-6 text-right">Actions</th>
                 </tr>
               </thead>
@@ -148,6 +148,9 @@ import { IconComponent } from '../icon/icon.component';
                     <td class="py-3.5 px-4 sm:px-6 text-slate-600 dark:text-slate-400 font-mono text-xs">
                       {{ item.date }}
                     </td>
+                    <td class="py-3.5 px-4 sm:px-6 font-bold text-emerald-600 dark:text-emerald-400">
+                      {{ item.amount | inrCurrency:true }}
+                    </td>
                     <td class="py-3.5 px-4 sm:px-6 font-semibold text-slate-800 dark:text-slate-200">
                       <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 dark:border dark:border-blue-800/40">
                         {{ item.source }}
@@ -155,9 +158,6 @@ import { IconComponent } from '../icon/icon.component';
                     </td>
                     <td class="py-3.5 px-4 sm:px-6 text-slate-700 dark:text-slate-300">
                       {{ item.note || '-' }}
-                    </td>
-                    <td class="py-3.5 px-4 sm:px-6 font-bold text-emerald-600 dark:text-emerald-400">
-                      {{ item.amount | inrCurrency:true }}
                     </td>
                     <td class="py-3.5 px-4 sm:px-6 text-right">
                       <button
