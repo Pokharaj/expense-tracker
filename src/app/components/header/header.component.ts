@@ -10,27 +10,27 @@ import { IconComponent } from '../icon/icon.component';
   imports: [CommonModule, IconComponent],
   template: `
     <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-sm transition-colors duration-150">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-16 py-2.5 sm:py-0 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 sm:gap-4">
         <!-- Brand Identity -->
-        <div class="flex items-center space-x-3">
-          <div class="bg-indigo-600 dark:bg-indigo-500 text-white p-2 rounded-xl shadow-sm flex items-center justify-center">
+        <div class="flex items-center space-x-2.5 sm:space-x-3">
+          <div class="bg-indigo-600 dark:bg-indigo-500 text-white p-2 rounded-xl shadow-sm flex items-center justify-center shrink-0">
             <app-icon name="wallet"></app-icon>
           </div>
           <div>
-            <h1 class="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-none">
+            <h1 class="text-base sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-none">
               Expense & Budget Tracker
             </h1>
-            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block mt-0.5">
+            <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block mt-0.5">
               Personal Wealth & Financial Ledger SPA
             </p>
           </div>
         </div>
 
         <!-- Controls: Month Selector & Theme Switcher -->
-        <div class="flex items-center space-x-2 sm:space-x-3">
+        <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
           <!-- Month Selector -->
-          <div class="flex items-center bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-colors">
-            <span class="text-slate-400 dark:text-slate-400 mr-2 flex items-center">
+          <div class="flex items-center bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-2 sm:px-2.5 py-1 sm:py-1.5 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-colors">
+            <span class="text-slate-400 dark:text-slate-400 mr-1.5 sm:mr-2 flex items-center">
               <app-icon name="calendar"></app-icon>
             </span>
             <label for="month-selector" class="sr-only">Select Month</label>
@@ -39,7 +39,7 @@ import { IconComponent } from '../icon/icon.component';
               type="month"
               [value]="tracker.selectedMonth()"
               (change)="onMonthChange($event)"
-              class="bg-transparent border-none text-sm font-semibold text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none cursor-pointer"
+              class="bg-transparent border-none text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none cursor-pointer"
             />
           </div>
 

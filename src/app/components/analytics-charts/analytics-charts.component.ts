@@ -211,6 +211,7 @@ export class AnalyticsChartsComponent implements AfterViewInit, OnDestroy {
             }
           }
         });
+        (this.barCanvasRef.nativeElement as any).__chart = this.barChartInstance;
       }
     }
 
@@ -295,6 +296,7 @@ export class AnalyticsChartsComponent implements AfterViewInit, OnDestroy {
             cutout: '65%'
           }
         });
+        (this.pieCanvasRef.nativeElement as any).__chart = this.pieChartInstance;
       }
     }
   }
