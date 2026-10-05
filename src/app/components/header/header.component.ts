@@ -21,7 +21,7 @@ import { IconComponent } from '../icon/icon.component';
               Expense & Budget Tracker
             </h1>
             <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block mt-0.5">
-              Personal Wealth & Financial Ledger SPA
+              Personal Wealth & Financial Ledger
             </p>
           </div>
         </div>
