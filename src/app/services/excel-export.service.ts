@@ -32,7 +32,8 @@ export class ExcelExportService {
 
   /**
    * Generates and downloads a multi-tab .xlsx workbook matching the exact structure,
-   * fonts (Raleway & Lato), and colors of "Budget September 2026.xlsx".
+   * typography (Raleway & Lato), and color palette of "Budget September 2026.xlsx".
+   * Built natively with clean OpenXML compliance to avoid repair warnings.
    */
   public async exportFinancialReport(): Promise<void> {
     try {
@@ -55,29 +56,13 @@ export class ExcelExportService {
       const monthDate = new Date(year, (month || 1) - 1, 1);
       const formattedMonth = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-      // Attempt to load the pre-configured template containing native charts & layout
-      let loadedFromTemplate = false;
-      try {
-        const templateUrl = new URL('templates/budget-template.xlsx', document.baseURI).href;
-        const response = await fetch(templateUrl);
-        if (response.ok) {
-          const arrayBuffer = await response.arrayBuffer();
-          await workbook.xlsx.load(arrayBuffer);
-          loadedFromTemplate = true;
-        }
-      } catch (err) {
-        console.warn('Could not fetch template file, building workbook programmatically:', err);
-      }
-
-      if (loadedFromTemplate) {
-        this.populateTemplateWorkbook(workbook, selectedMonth, formattedMonth);
-      } else {
-        this.buildProgrammaticWorkbook(workbook, selectedMonth, formattedMonth);
-      }
+      // Build the entire multi-tab workbook programmatically with 100% compliant OpenXML
+      await this.buildProgrammaticWorkbook(workbook, selectedMonth, formattedMonth);
 
       // Metadata
       workbook.creator = 'Angular Expense & Budget Tracker';
       workbook.lastModifiedBy = 'Angular Expense & Budget Tracker';
+      workbook.created = new Date();
       workbook.modified = new Date();
 
       // Generate binary buffer & trigger client-side download
@@ -98,63 +83,31 @@ export class ExcelExportService {
   }
 
   /**
-   * Populates an already-loaded template workbook with current state data.
+   * Builds the multi-tab workbook programmatically matching the template styling.
    */
-  private populateTemplateWorkbook(workbook: Workbook, selectedMonth: string, formattedMonth: string): void {
-    const summary = workbook.getWorksheet('Summary');
-    const transactions = workbook.getWorksheet('Transactions');
-
-    if (!summary || !transactions) {
-      this.buildProgrammaticWorkbook(workbook, selectedMonth, formattedMonth);
-      return;
-    }
-
-    // 1. Update Title in Summary (Cell B8)
-    summary.getCell('B8').value = `Monthly Budget - ${formattedMonth}`;
-
-    // 2. Clear old transactions starting from row 6
-    const maxExistingRows = Math.max(transactions.rowCount, 150);
-    for (let r = 6; r <= maxExistingRows; r++) {
-      const row = transactions.getRow(r);
-      for (let c = 1; c <= 12; c++) {
-        row.getCell(c).value = null;
-      }
-    }
-
-    // 3. Populate Transactions & Categories
-    this.populateTransactionsAndSummary(summary, transactions, selectedMonth);
-  }
-
-  /**
-   * Fallback: Builds the entire multi-tab workbook programmatically matching the template styling.
-   */
-  private buildProgrammaticWorkbook(workbook: Workbook, selectedMonth: string, formattedMonth: string): void {
-    // Clear any existing sheets
-    while (workbook.worksheets.length > 0) {
-      workbook.removeWorksheet(workbook.worksheets[0].id);
-    }
-
+  private async buildProgrammaticWorkbook(workbook: Workbook, selectedMonth: string, formattedMonth: string): Promise<void> {
     // Sheet 1: Summary
     const summary = workbook.addWorksheet('Summary', {
-      properties: { tabColor: { argb: PALETTE.orange } },
+      properties: { tabColor: { argb: PALETTE.navy } },
       views: [{ showGridLines: true }]
     });
     this.setupSummaryColumnsAndHeaders(summary, formattedMonth);
 
     // Sheet 2: Transactions
     const transactions = workbook.addWorksheet('Transactions', {
-      properties: { tabColor: { argb: PALETTE.navy } },
+      properties: { tabColor: { argb: PALETTE.orange } },
       views: [{ showGridLines: true }]
     });
     this.setupTransactionsColumnsAndHeaders(transactions);
 
     // Sheet 3: Visualization
-    workbook.addWorksheet('Visualization', {
+    const viz = workbook.addWorksheet('Visualization', {
       properties: { tabColor: { argb: PALETTE.orange } },
       views: [{ showGridLines: true }]
     });
+    this.setupVisualizationSheet(workbook, viz, formattedMonth);
 
-    // Populate data
+    // Populate data & formulas
     this.populateTransactionsAndSummary(summary, transactions, selectedMonth);
   }
 
@@ -240,7 +193,7 @@ export class ExcelExportService {
     // KPI Cards
     sheet.getCell('D16').value = 'START BALANCE  ';
     sheet.getCell('D16').font = { name: FONTS.body, size: 13, bold: true, color: { argb: PALETTE.navy } };
-    sheet.getCell('D17').value = { formula: 'if(isblank(L8),0,L8)', result: 0 };
+    sheet.getCell('D17').value = { formula: 'IF(ISBLANK(L8), 0, L8)', result: 0 };
     sheet.getCell('D17').numFmt = '[$₹]#,##0';
     sheet.getCell('D17').font = { name: FONTS.body, size: 11, color: { argb: PALETTE.amountText } };
 
@@ -256,27 +209,27 @@ export class ExcelExportService {
     sheet.mergeCells('I16:K16');
 
     const savPct = sheet.getCell('I13');
-    savPct.value = { formula: 'iferror(E17/D17-1, "")', result: 0 };
+    savPct.value = { formula: 'IFERROR(E17/D17-1, 0)', result: 0 };
     savPct.numFmt = '+#,#%;-#,#%;0%';
     savPct.font = { name: FONTS.body, size: 20, color: { argb: PALETTE.navy } };
     savPct.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.savingsBox } };
     savPct.alignment = { horizontal: 'center' };
 
     const savStatus = sheet.getCell('I14');
-    savStatus.value = { formula: 'if(I13 < 0, "Decrease in total savings", "Increase in total savings")', result: 'Increase in total savings' };
+    savStatus.value = { formula: 'IF(I13 < 0, "Decrease in total savings", "Increase in total savings")', result: 'Increase in total savings' };
     savStatus.font = { name: FONTS.body, size: 9.5, color: { argb: PALETTE.amountText } };
     savStatus.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.savingsBox } };
     savStatus.alignment = { horizontal: 'center' };
 
     const savAmt = sheet.getCell('I15');
-    savAmt.value = { formula: 'iferror(E17-D17, 0)', result: 0 };
+    savAmt.value = { formula: 'IFERROR(E17-D17, 0)', result: 0 };
     savAmt.numFmt = '[$₹]#,##0';
     savAmt.font = { name: FONTS.body, size: 22, bold: true, color: { argb: PALETTE.navy } };
     savAmt.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.savingsBox } };
     savAmt.alignment = { horizontal: 'center' };
 
     const savDesc = sheet.getCell('I16');
-    savDesc.value = { formula: 'if(J15<0, "Spent this month", "Saved this month")', result: 'Saved this month' };
+    savDesc.value = { formula: 'IF(I15 < 0, "Spent this month", "Saved this month")', result: 'Saved this month' };
     savDesc.font = { name: FONTS.body, size: 9.5, color: { argb: PALETTE.amountText } };
     savDesc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.savingsBox } };
     savDesc.alignment = { horizontal: 'center' };
@@ -287,7 +240,7 @@ export class ExcelExportService {
     sheet.getCell('B20').font = { name: FONTS.body, size: 13, bold: true, color: { argb: PALETTE.navy } };
 
     sheet.getCell('B21').value = 'Planned';
-    sheet.getCell('B21').font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.amountText } };
+    sheet.getCell('B21').font = { name: FONTS.body, size: 10, color: { argb: PALETTE.amountText } };
     sheet.getCell('C21').value = { formula: 'D26', result: 0 };
     sheet.getCell('C21').numFmt = '[$₹]#,##0';
     sheet.getCell('C21').font = { name: FONTS.body, size: 10, color: { argb: PALETTE.amountText } };
@@ -302,7 +255,7 @@ export class ExcelExportService {
     sheet.getCell('H20').font = { name: FONTS.body, size: 13, bold: true, color: { argb: PALETTE.navy } };
 
     sheet.getCell('H21').value = 'Planned';
-    sheet.getCell('H21').font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.amountText } };
+    sheet.getCell('H21').font = { name: FONTS.body, size: 10, color: { argb: PALETTE.amountText } };
     sheet.getCell('I21').value = { formula: 'J26', result: 0 };
     sheet.getCell('I21').numFmt = '[$₹]#,##0';
     sheet.getCell('I21').font = { name: FONTS.body, size: 10, color: { argb: PALETTE.amountText } };
@@ -348,9 +301,37 @@ export class ExcelExportService {
     // Totals Row 26
     sheet.getCell('B26').value = 'Totals';
     sheet.getCell('B26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    sheet.getCell('D26').value = { formula: 'SUM(D27:D44)', result: 0 };
+    sheet.getCell('D26').numFmt = '[$₹]#,##0';
+    sheet.getCell('D26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    sheet.getCell('D26').alignment = { horizontal: 'right' };
+
+    sheet.getCell('E26').value = { formula: 'SUM(E27:E44)', result: 0 };
+    sheet.getCell('E26').numFmt = '[$₹]#,##0';
+    sheet.getCell('E26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    sheet.getCell('E26').alignment = { horizontal: 'right' };
+
+    sheet.getCell('F26').value = { formula: 'SUM(F27:F44)', result: 0 };
+    sheet.getCell('F26').numFmt = '[$₹]#,##0';
+    sheet.getCell('F26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    sheet.getCell('F26').alignment = { horizontal: 'right' };
 
     sheet.getCell('H26').value = 'Totals';
     sheet.getCell('H26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    sheet.getCell('J26').value = { formula: 'SUM(J27:J42)', result: 0 };
+    sheet.getCell('J26').numFmt = '[$₹]#,##0';
+    sheet.getCell('J26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    sheet.getCell('J26').alignment = { horizontal: 'right' };
+
+    sheet.getCell('K26').value = { formula: 'SUM(K27:K42)', result: 0 };
+    sheet.getCell('K26').numFmt = '[$₹]#,##0';
+    sheet.getCell('K26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    sheet.getCell('K26').alignment = { horizontal: 'right' };
+
+    sheet.getCell('L26').value = { formula: 'SUM(L27:L42)', result: 0 };
+    sheet.getCell('L26').numFmt = '[$₹]#,##0';
+    sheet.getCell('L26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    sheet.getCell('L26').alignment = { horizontal: 'right' };
   }
 
   /**
@@ -404,6 +385,77 @@ export class ExcelExportService {
       c.value = h.text;
       c.font = { name: FONTS.body, size: 10.5, bold: true, color: { argb: PALETTE.navy } };
       c.alignment = { horizontal: h.align as any, vertical: 'middle' };
+    }
+  }
+
+  /**
+   * Sets up the Visualization sheet with title banner and embedded dashboard chart graphics.
+   */
+  private setupVisualizationSheet(workbook: Workbook, sheet: Worksheet, formattedMonth: string): void {
+    sheet.columns = [
+      { width: 4.14 },
+      { width: 18.0 },
+      { width: 18.0 },
+      { width: 18.0 },
+      { width: 18.0 },
+      { width: 18.0 },
+      { width: 18.0 },
+      { width: 18.0 },
+      { width: 4.14 }
+    ];
+
+    sheet.mergeCells('B2:H3');
+    const title = sheet.getCell('B2');
+    title.value = `EXPENSE & BUDGET VISUALIZATION — ${formattedMonth.toUpperCase()}`;
+    title.font = { name: FONTS.header, size: 16, bold: true, color: { argb: PALETTE.white } };
+    title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.navy } };
+    title.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    // Capture and embed Bar Chart & Doughnut Chart from dashboard DOM
+    const barCanvas = typeof document !== 'undefined' ? (document.getElementById('bar-chart-canvas') as HTMLCanvasElement | null) : null;
+    let placedCharts = 0;
+
+    if (barCanvas && typeof barCanvas.toDataURL === 'function') {
+      try {
+        const barImgBase64 = this.renderCanvasWithBackground(barCanvas);
+        const barImgId = workbook.addImage({
+          base64: barImgBase64,
+          extension: 'png'
+        });
+        sheet.addImage(barImgId, {
+          tl: { col: 1, row: 5 },
+          ext: { width: 560, height: 280 }
+        });
+        placedCharts++;
+      } catch (err) {
+        console.warn('Could not embed bar chart snapshot:', err);
+      }
+    }
+
+    const pieCanvas = typeof document !== 'undefined' ? (document.getElementById('doughnut-chart-canvas') as HTMLCanvasElement | null) : null;
+    if (pieCanvas && typeof pieCanvas.toDataURL === 'function') {
+      try {
+        const pieImgBase64 = this.renderCanvasWithBackground(pieCanvas);
+        const pieImgId = workbook.addImage({
+          base64: pieImgBase64,
+          extension: 'png'
+        });
+        sheet.addImage(pieImgId, {
+          tl: { col: 1, row: 21 },
+          ext: { width: 560, height: 280 }
+        });
+        placedCharts++;
+      } catch (err) {
+        console.warn('Could not embed doughnut chart snapshot:', err);
+      }
+    }
+
+    if (placedCharts === 0) {
+      sheet.mergeCells('B5:H7');
+      const placeholder = sheet.getCell('B5');
+      placeholder.value = `Interactive Budget vs. Actual Outflow and Category Allocation Analytics for ${formattedMonth}.`;
+      placeholder.font = { name: FONTS.body, size: 11, italic: true, color: { argb: PALETTE.mutedText } };
+      placeholder.alignment = { horizontal: 'center', vertical: 'middle' };
     }
   }
 
@@ -603,7 +655,7 @@ export class ExcelExportService {
         dCell.alignment = { horizontal: 'right' };
 
         eCell.value = {
-          formula: `if(isblank($B${r}), "", sumif(Transactions!$F:$F,$B${r},Transactions!$D:$D))`,
+          formula: `IF(ISBLANK($B${r}), "", SUMIF(Transactions!$F:$F, $B${r}, Transactions!$D:$D))`,
           result: actual
         };
         eCell.numFmt = '[$₹]#,##0';
@@ -611,7 +663,7 @@ export class ExcelExportService {
         eCell.alignment = { horizontal: 'right' };
 
         fCell.value = {
-          formula: `if(isblank($B${r}), "", D${r}-E${r})`,
+          formula: `IF(ISBLANK($B${r}), "", D${r}-E${r})`,
           result: planned - actual
         };
         fCell.numFmt = '[$₹]#,##0';
@@ -620,15 +672,8 @@ export class ExcelExportService {
       } else {
         bCell.value = '';
         dCell.value = null;
-        dCell.fill = { type: 'pattern', pattern: 'none' };
-        eCell.value = {
-          formula: `if(isblank($B${r}), "", sumif(Transactions!$F:$F,$B${r},Transactions!$D:$D))`,
-          result: undefined
-        };
-        fCell.value = {
-          formula: `if(isblank($B${r}), "", D${r}-E${r})`,
-          result: undefined
-        };
+        eCell.value = null;
+        fCell.value = null;
       }
     }
 
@@ -661,7 +706,7 @@ export class ExcelExportService {
         jCell.alignment = { horizontal: 'right' };
 
         kCell.value = {
-          formula: `if(isblank($H${r}), "", sumif(Transactions!$K:$K,$H${r},Transactions!$I:$I))`,
+          formula: `IF(ISBLANK($H${r}), "", SUMIF(Transactions!$K:$K, $H${r}, Transactions!$I:$I))`,
           result: actual
         };
         kCell.numFmt = '[$₹]#,##0';
@@ -669,7 +714,7 @@ export class ExcelExportService {
         kCell.alignment = { horizontal: 'right' };
 
         lCell.value = {
-          formula: `if(isblank($H${r}), "", K${r}-J${r})`,
+          formula: `IF(ISBLANK($H${r}), "", K${r}-J${r})`,
           result: actual - planned
         };
         lCell.numFmt = '[$₹]#,##0';
@@ -678,45 +723,38 @@ export class ExcelExportService {
       } else {
         hCell.value = '';
         jCell.value = null;
-        jCell.fill = { type: 'pattern', pattern: 'none' };
-        kCell.value = {
-          formula: `if(isblank($H${r}), "", sumif(Transactions!$K:$K,$H${r},Transactions!$I:$I))`,
-          result: undefined
-        };
-        lCell.value = {
-          formula: `if(isblank($H${r}), "", K${r}-J${r})`,
-          result: undefined
-        };
+        kCell.value = null;
+        lCell.value = null;
       }
     }
 
     // 4. Update Summary Totals on Row 26
-    summary.getCell('D26').value = { formula: 'sum(D27:D44)', result: totalPlannedExpenses };
+    summary.getCell('D26').value = { formula: 'SUM(D27:D44)', result: totalPlannedExpenses };
     summary.getCell('D26').numFmt = '[$₹]#,##0';
     summary.getCell('D26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
     summary.getCell('D26').alignment = { horizontal: 'right' };
 
-    summary.getCell('E26').value = { formula: 'sum(E27:E44)', result: totalActualExpenses };
+    summary.getCell('E26').value = { formula: 'SUM(E27:E44)', result: totalActualExpenses };
     summary.getCell('E26').numFmt = '[$₹]#,##0';
     summary.getCell('E26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
     summary.getCell('E26').alignment = { horizontal: 'right' };
 
-    summary.getCell('F26').value = { formula: 'sum(F27:F44)', result: totalPlannedExpenses - totalActualExpenses };
+    summary.getCell('F26').value = { formula: 'SUM(F27:F44)', result: totalPlannedExpenses - totalActualExpenses };
     summary.getCell('F26').numFmt = '[$₹]#,##0';
     summary.getCell('F26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
     summary.getCell('F26').alignment = { horizontal: 'right' };
 
-    summary.getCell('J26').value = { formula: 'sum(J27:J42)', result: totalPlannedIncome };
+    summary.getCell('J26').value = { formula: 'SUM(J27:J42)', result: totalPlannedIncome };
     summary.getCell('J26').numFmt = '[$₹]#,##0';
     summary.getCell('J26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
     summary.getCell('J26').alignment = { horizontal: 'right' };
 
-    summary.getCell('K26').value = { formula: 'sum(K27:K42)', result: totalActualIncome };
+    summary.getCell('K26').value = { formula: 'SUM(K27:K42)', result: totalActualIncome };
     summary.getCell('K26').numFmt = '[$₹]#,##0';
     summary.getCell('K26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
     summary.getCell('K26').alignment = { horizontal: 'right' };
 
-    summary.getCell('L26').value = { formula: 'sum(L27:L42)', result: totalActualIncome - totalPlannedIncome };
+    summary.getCell('L26').value = { formula: 'SUM(L27:L42)', result: totalActualIncome - totalPlannedIncome };
     summary.getCell('L26').numFmt = '[$₹]#,##0';
     summary.getCell('L26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
     summary.getCell('L26').alignment = { horizontal: 'right' };
@@ -731,23 +769,48 @@ export class ExcelExportService {
     const netSavings = totalActualIncome - totalActualExpenses;
     const endBalance = startingBalance + netSavings;
 
-    summary.getCell('D17').value = { formula: 'if(isblank(L8),0,L8)', result: startingBalance };
+    summary.getCell('D17').value = { formula: 'IF(ISBLANK(L8), 0, L8)', result: startingBalance };
     summary.getCell('E17').value = { formula: 'D17+(I22-C22)', result: endBalance };
 
-    summary.getCell('I15').value = { formula: 'iferror(E17-D17, 0)', result: netSavings };
+    summary.getCell('I15').value = { formula: 'IFERROR(E17-D17, 0)', result: netSavings };
     summary.getCell('I16').value = {
-      formula: 'if(J15<0, "Spent this month", "Saved this month")',
+      formula: 'IF(I15 < 0, "Spent this month", "Saved this month")',
       result: netSavings >= 0 ? 'Saved this month' : 'Spent this month'
     };
 
     summary.getCell('I13').value = {
-      formula: 'iferror(E17/D17-1, "")',
+      formula: 'IFERROR(E17/D17-1, 0)',
       result: startingBalance > 0 ? (netSavings / startingBalance) : 0
     };
     summary.getCell('I14').value = {
-      formula: 'if(I13 < 0, "Decrease in total savings", "Increase in total savings")',
+      formula: 'IF(I13 < 0, "Decrease in total savings", "Increase in total savings")',
       result: netSavings < 0 ? 'Decrease in total savings' : 'Increase in total savings'
     };
+  }
+
+  /**
+   * Renders the given canvas onto an offscreen canvas with a clean white background
+   * ensuring crystal-clear readability when embedded into Excel.
+   */
+  private renderCanvasWithBackground(sourceCanvas: HTMLCanvasElement): string {
+    const offscreen = document.createElement('canvas');
+    offscreen.width = sourceCanvas.width;
+    offscreen.height = sourceCanvas.height;
+    const ctx = offscreen.getContext('2d');
+
+    if (!ctx) {
+      return sourceCanvas.toDataURL('image/png');
+    }
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, offscreen.width, offscreen.height);
+    ctx.drawImage(sourceCanvas, 0, 0);
+
+    ctx.strokeStyle = '#E2E8F0';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, offscreen.width - 2, offscreen.height - 2);
+
+    return offscreen.toDataURL('image/png');
   }
 
   /**
