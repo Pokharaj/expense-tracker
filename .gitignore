@@ -44,3 +44,4 @@ Thumbs.db
 # Test artifacts
 e2e-artifacts/
 e2e-*.cjs
+scratch/

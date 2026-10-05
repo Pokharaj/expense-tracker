@@ -1,18 +1,38 @@
 import { Injectable, inject } from '@angular/core';
-import type { Workbook } from 'exceljs';
+import type { Workbook, Worksheet } from 'exceljs';
 import { TrackerService } from './tracker.service';
-import { ThemeService } from './theme.service';
+
+/**
+ * Palette constants matching the Budget September 2026 template
+ */
+const PALETTE = {
+  orange: 'FFF46524',      // Raleway title & primary accent
+  navy: 'FF334960',        // Deep Slate Navy for banners, table headers
+  darkText: 'FF434343',    // Dark Charcoal for category names
+  amountText: 'FF576475',  // Medium slate for bold currency amounts
+  mutedText: 'FF687887',   // Muted slate-gray for dates & categories
+  descText: 'FF556376',    // Description body text
+  lightText: 'FFCCCCCC',   // Light gray for dark banner subtitle
+  peachFill: 'FFFFF2ED',   // Soft peach highlight for editable input cells
+  savingsBox: 'FFEBEDEF',  // Light grayish box for savings callout
+  borderHair: 'FFD9D9D9',  // Hairline border
+  white: 'FFFFFFFF'
+};
+
+const FONTS = {
+  header: 'Raleway',
+  body: 'Lato'
+};
 
 @Injectable({
   providedIn: 'root'
 })
 export class ExcelExportService {
   private readonly tracker = inject(TrackerService);
-  private readonly themeService = inject(ThemeService);
 
   /**
-   * Generates and downloads a multi-tab, professionally styled .xlsx workbook
-   * with embedded chart analytics, KPI summaries, and detailed financial ledgers.
+   * Generates and downloads a multi-tab .xlsx workbook matching the exact structure,
+   * fonts (Raleway & Lato), and colors of "Budget September 2026.xlsx".
    */
   public async exportFinancialReport(): Promise<void> {
     try {
@@ -30,38 +50,46 @@ export class ExcelExportService {
         (fileSaverModule as any).default ||
         fileSaverModule;
 
+      const selectedMonth = this.tracker.selectedMonth();
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const monthDate = new Date(year, (month || 1) - 1, 1);
+      const formattedMonth = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+      // Attempt to load the pre-configured template containing native charts & layout
+      let loadedFromTemplate = false;
+      try {
+        const templateUrl = new URL('templates/budget-template.xlsx', document.baseURI).href;
+        const response = await fetch(templateUrl);
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          await workbook.xlsx.load(arrayBuffer);
+          loadedFromTemplate = true;
+        }
+      } catch (err) {
+        console.warn('Could not fetch template file, building workbook programmatically:', err);
+      }
+
+      if (loadedFromTemplate) {
+        this.populateTemplateWorkbook(workbook, selectedMonth, formattedMonth);
+      } else {
+        this.buildProgrammaticWorkbook(workbook, selectedMonth, formattedMonth);
+      }
+
+      // Metadata
       workbook.creator = 'Angular Expense & Budget Tracker';
       workbook.lastModifiedBy = 'Angular Expense & Budget Tracker';
-      workbook.created = new Date();
       workbook.modified = new Date();
 
-      const selectedMonth = this.tracker.selectedMonth();
-      const isDark = this.themeService.isDarkMode();
-
-      // 1. Tab 1: Overview & Analytics
-      await this.buildOverviewSheet(workbook, selectedMonth, isDark);
-
-      // 2. Tab 2: Income Log
-      this.buildIncomeSheet(workbook);
-
-      // 3. Tab 3: Budget Planner
-      this.buildBudgetSheet(workbook);
-
-      // 4. Tab 4: Expense Ledger
-      this.buildExpenseSheet(workbook);
-
-      // Generate buffer and trigger browser download
+      // Generate binary buffer & trigger client-side download
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
 
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const filename = `Expense_Tracker_Report_${selectedMonth}_${todayStr}.xlsx`;
-
+      const filename = `Budget_${formattedMonth.replace(/\s+/g, '_')}.xlsx`;
       this.downloadBlob(saveAs, blob, filename);
 
-      this.tracker.showToast('Financial report exported successfully!', 'success');
+      this.tracker.showToast(`Budget for ${formattedMonth} exported successfully!`, 'success');
     } catch (error) {
       console.error('Failed to export Excel report:', error);
       this.tracker.showToast('Failed to export Excel workbook. Please try again.', 'error');
@@ -70,7 +98,606 @@ export class ExcelExportService {
   }
 
   /**
-   * Native file download trigger with file-saver & anchor fallback
+   * Populates an already-loaded template workbook with current state data.
+   */
+  private populateTemplateWorkbook(workbook: Workbook, selectedMonth: string, formattedMonth: string): void {
+    const summary = workbook.getWorksheet('Summary');
+    const transactions = workbook.getWorksheet('Transactions');
+
+    if (!summary || !transactions) {
+      this.buildProgrammaticWorkbook(workbook, selectedMonth, formattedMonth);
+      return;
+    }
+
+    // 1. Update Title in Summary (Cell B8)
+    summary.getCell('B8').value = `Monthly Budget - ${formattedMonth}`;
+
+    // 2. Clear old transactions starting from row 6
+    const maxExistingRows = Math.max(transactions.rowCount, 150);
+    for (let r = 6; r <= maxExistingRows; r++) {
+      const row = transactions.getRow(r);
+      for (let c = 1; c <= 12; c++) {
+        row.getCell(c).value = null;
+      }
+    }
+
+    // 3. Populate Transactions & Categories
+    this.populateTransactionsAndSummary(summary, transactions, selectedMonth);
+  }
+
+  /**
+   * Fallback: Builds the entire multi-tab workbook programmatically matching the template styling.
+   */
+  private buildProgrammaticWorkbook(workbook: Workbook, selectedMonth: string, formattedMonth: string): void {
+    // Clear any existing sheets
+    while (workbook.worksheets.length > 0) {
+      workbook.removeWorksheet(workbook.worksheets[0].id);
+    }
+
+    // Sheet 1: Summary
+    const summary = workbook.addWorksheet('Summary', {
+      properties: { tabColor: { argb: PALETTE.orange } },
+      views: [{ showGridLines: true }]
+    });
+    this.setupSummaryColumnsAndHeaders(summary, formattedMonth);
+
+    // Sheet 2: Transactions
+    const transactions = workbook.addWorksheet('Transactions', {
+      properties: { tabColor: { argb: PALETTE.navy } },
+      views: [{ showGridLines: true }]
+    });
+    this.setupTransactionsColumnsAndHeaders(transactions);
+
+    // Sheet 3: Visualization
+    workbook.addWorksheet('Visualization', {
+      properties: { tabColor: { argb: PALETTE.orange } },
+      views: [{ showGridLines: true }]
+    });
+
+    // Populate data
+    this.populateTransactionsAndSummary(summary, transactions, selectedMonth);
+  }
+
+  /**
+   * Sets up column widths, instructions banner, and layout for Summary sheet.
+   */
+  private setupSummaryColumnsAndHeaders(sheet: Worksheet, formattedMonth: string): void {
+    sheet.columns = [
+      { width: 6.13 },  // A (Margin)
+      { width: 14.0 },  // B (Category)
+      { width: 14.0 },  // C (Spacer)
+      { width: 12.0 },  // D (Planned)
+      { width: 12.0 },  // E (Actual)
+      { width: 12.0 },  // F (Diff)
+      { width: 6.13 },  // G (Spacer)
+      { width: 14.0 },  // H (Category)
+      { width: 14.0 },  // I (Spacer)
+      { width: 12.0 },  // J (Planned)
+      { width: 12.0 },  // K (Actual)
+      { width: 12.0 },  // L (Diff)
+      { width: 6.13 }   // M (Margin)
+    ];
+
+    // Banner: Instructions
+    sheet.mergeCells('B2:H2');
+    const getStarted = sheet.getCell('B2');
+    getStarted.value = 'GET STARTED';
+    getStarted.font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.lightText } };
+    getStarted.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.navy } };
+
+    sheet.mergeCells('I2:L2');
+    const note = sheet.getCell('I2');
+    note.value = 'NOTE';
+    note.font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.lightText } };
+    note.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.navy } };
+
+    sheet.mergeCells('B3:G4');
+    const instr1 = sheet.getCell('B3');
+    instr1.value = "Set your starting balance in cell L8, then customize your categories and planned spending amounts in the 'Income' and 'Expenses' tables below.";
+    instr1.font = { name: FONTS.body, size: 9, italic: true, color: { argb: PALETTE.lightText } };
+    instr1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.navy } };
+    instr1.alignment = { wrapText: true, vertical: 'top' };
+
+    sheet.mergeCells('I3:L3');
+    const note1 = sheet.getCell('I3');
+    note1.value = 'Only edit highlighted cells.';
+    note1.font = { name: FONTS.body, size: 9, italic: true, color: { argb: PALETTE.lightText } };
+    note1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.navy } };
+
+    sheet.mergeCells('I4:L5');
+    const note2 = sheet.getCell('I4');
+    note2.value = 'Try not to alter cells that contain a formula.';
+    note2.font = { name: FONTS.body, size: 9, italic: true, color: { argb: PALETTE.lightText } };
+    note2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.navy } };
+
+    sheet.mergeCells('B5:G6');
+    const instr2 = sheet.getCell('B5');
+    instr2.value = "As you enter data in the 'Transactions' tab, this sheet will automatically update to show a summary of your spending for the month.";
+    instr2.font = { name: FONTS.body, size: 9, italic: true, color: { argb: PALETTE.lightText } };
+    instr2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.navy } };
+    instr2.alignment = { wrapText: true, vertical: 'top' };
+
+    // Row 8: Title & Starting balance
+    sheet.mergeCells('B8:E9');
+    const titleCell = sheet.getCell('B8');
+    titleCell.value = `Monthly Budget - ${formattedMonth}`;
+    titleCell.font = { name: FONTS.header, size: 24, bold: true, color: { argb: PALETTE.orange } };
+    titleCell.alignment = { vertical: 'middle' };
+
+    sheet.mergeCells('J8:K8');
+    const sbLabel = sheet.getCell('J8');
+    sbLabel.value = 'Starting balance: ';
+    sbLabel.font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.navy } };
+    sbLabel.alignment = { horizontal: 'right', vertical: 'middle' };
+
+    const sbVal = sheet.getCell('L8');
+    sbVal.value = 0;
+    sbVal.numFmt = '[$₹]#,##0';
+    sbVal.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.navy } };
+    sbVal.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.peachFill } };
+    sbVal.alignment = { horizontal: 'right', vertical: 'middle' };
+
+    // KPI Cards
+    sheet.getCell('D16').value = 'START BALANCE  ';
+    sheet.getCell('D16').font = { name: FONTS.body, size: 13, bold: true, color: { argb: PALETTE.navy } };
+    sheet.getCell('D17').value = { formula: 'if(isblank(L8),0,L8)', result: 0 };
+    sheet.getCell('D17').numFmt = '[$₹]#,##0';
+    sheet.getCell('D17').font = { name: FONTS.body, size: 11, color: { argb: PALETTE.amountText } };
+
+    sheet.getCell('E16').value = ' END BALANCE';
+    sheet.getCell('E16').font = { name: FONTS.body, size: 13, bold: true, color: { argb: PALETTE.orange } };
+    sheet.getCell('E17').value = { formula: 'D17+(I22-C22)', result: 0 };
+    sheet.getCell('E17').numFmt = '[$₹]#,##0';
+    sheet.getCell('E17').font = { name: FONTS.body, size: 11, bold: true, color: { argb: PALETTE.orange } };
+
+    sheet.mergeCells('I13:K13');
+    sheet.mergeCells('I14:K14');
+    sheet.mergeCells('I15:K15');
+    sheet.mergeCells('I16:K16');
+
+    const savPct = sheet.getCell('I13');
+    savPct.value = { formula: 'iferror(E17/D17-1, "")', result: 0 };
+    savPct.numFmt = '+#,#%;-#,#%;0%';
+    savPct.font = { name: FONTS.body, size: 20, color: { argb: PALETTE.navy } };
+    savPct.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.savingsBox } };
+    savPct.alignment = { horizontal: 'center' };
+
+    const savStatus = sheet.getCell('I14');
+    savStatus.value = { formula: 'if(I13 < 0, "Decrease in total savings", "Increase in total savings")', result: 'Increase in total savings' };
+    savStatus.font = { name: FONTS.body, size: 9.5, color: { argb: PALETTE.amountText } };
+    savStatus.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.savingsBox } };
+    savStatus.alignment = { horizontal: 'center' };
+
+    const savAmt = sheet.getCell('I15');
+    savAmt.value = { formula: 'iferror(E17-D17, 0)', result: 0 };
+    savAmt.numFmt = '[$₹]#,##0';
+    savAmt.font = { name: FONTS.body, size: 22, bold: true, color: { argb: PALETTE.navy } };
+    savAmt.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.savingsBox } };
+    savAmt.alignment = { horizontal: 'center' };
+
+    const savDesc = sheet.getCell('I16');
+    savDesc.value = { formula: 'if(J15<0, "Spent this month", "Saved this month")', result: 'Saved this month' };
+    savDesc.font = { name: FONTS.body, size: 9.5, color: { argb: PALETTE.amountText } };
+    savDesc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.savingsBox } };
+    savDesc.alignment = { horizontal: 'center' };
+
+    // Rows 20-22: Planned vs Actual bars
+    sheet.mergeCells('B20:F20');
+    sheet.getCell('B20').value = 'Expenses';
+    sheet.getCell('B20').font = { name: FONTS.body, size: 13, bold: true, color: { argb: PALETTE.navy } };
+
+    sheet.getCell('B21').value = 'Planned';
+    sheet.getCell('B21').font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.amountText } };
+    sheet.getCell('C21').value = { formula: 'D26', result: 0 };
+    sheet.getCell('C21').numFmt = '[$₹]#,##0';
+    sheet.getCell('C21').font = { name: FONTS.body, size: 10, color: { argb: PALETTE.amountText } };
+
+    sheet.getCell('B22').value = 'Actual';
+    sheet.getCell('B22').font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.navy } };
+    sheet.getCell('C22').value = { formula: 'E26', result: 0 };
+    sheet.getCell('C22').numFmt = '[$₹]#,##0';
+    sheet.getCell('C22').font = { name: FONTS.body, size: 10, color: { argb: PALETTE.navy } };
+
+    sheet.getCell('H20').value = 'Income';
+    sheet.getCell('H20').font = { name: FONTS.body, size: 13, bold: true, color: { argb: PALETTE.navy } };
+
+    sheet.getCell('H21').value = 'Planned';
+    sheet.getCell('H21').font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.amountText } };
+    sheet.getCell('I21').value = { formula: 'J26', result: 0 };
+    sheet.getCell('I21').numFmt = '[$₹]#,##0';
+    sheet.getCell('I21').font = { name: FONTS.body, size: 10, color: { argb: PALETTE.amountText } };
+
+    sheet.getCell('H22').value = 'Actual';
+    sheet.getCell('H22').font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.navy } };
+    sheet.getCell('I22').value = { formula: 'K26', result: 0 };
+    sheet.getCell('I22').numFmt = '[$₹]#,##0';
+    sheet.getCell('I22').font = { name: FONTS.body, size: 10, color: { argb: PALETTE.navy } };
+
+    // Tables Header on Row 24
+    sheet.mergeCells('B24:C24');
+    sheet.getCell('B24').value = 'Expenses';
+    sheet.getCell('B24').font = { name: FONTS.header, size: 16, bold: true, color: { argb: PALETTE.orange } };
+
+    sheet.getCell('D25').value = 'Planned';
+    sheet.getCell('D25').font = { name: FONTS.body, size: 10.5, bold: true, color: { argb: PALETTE.navy } };
+    sheet.getCell('D25').alignment = { horizontal: 'right' };
+
+    sheet.getCell('E25').value = 'Actual';
+    sheet.getCell('E25').font = { name: FONTS.body, size: 10.5, bold: true, color: { argb: PALETTE.navy } };
+    sheet.getCell('E25').alignment = { horizontal: 'right' };
+
+    sheet.getCell('F25').value = 'Diff.';
+    sheet.getCell('F25').font = { name: FONTS.body, size: 10.5, bold: true, color: { argb: PALETTE.navy } };
+    sheet.getCell('F25').alignment = { horizontal: 'right' };
+
+    sheet.getCell('H24').value = 'Income';
+    sheet.getCell('H24').font = { name: FONTS.header, size: 16, bold: true, color: { argb: PALETTE.orange } };
+
+    sheet.getCell('J25').value = 'Planned';
+    sheet.getCell('J25').font = { name: FONTS.body, size: 10.5, bold: true, color: { argb: PALETTE.navy } };
+    sheet.getCell('J25').alignment = { horizontal: 'right' };
+
+    sheet.getCell('K25').value = 'Actual';
+    sheet.getCell('K25').font = { name: FONTS.body, size: 10.5, bold: true, color: { argb: PALETTE.navy } };
+    sheet.getCell('K25').alignment = { horizontal: 'right' };
+
+    sheet.getCell('L25').value = 'Diff.';
+    sheet.getCell('L25').font = { name: FONTS.body, size: 10.5, bold: true, color: { argb: PALETTE.navy } };
+    sheet.getCell('L25').alignment = { horizontal: 'right' };
+
+    // Totals Row 26
+    sheet.getCell('B26').value = 'Totals';
+    sheet.getCell('B26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+
+    sheet.getCell('H26').value = 'Totals';
+    sheet.getCell('H26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+  }
+
+  /**
+   * Sets up column widths, instructions banner, and column headers for Transactions sheet.
+   */
+  private setupTransactionsColumnsAndHeaders(sheet: Worksheet): void {
+    sheet.columns = [
+      { width: 5.13 },  // A (Margin)
+      { width: 14.0 },  // B (Date)
+      { width: 5.13 },  // C (Spacer)
+      { width: 12.0 },  // D (Amount)
+      { width: 32.0 },  // E (Description)
+      { width: 18.0 },  // F (Category)
+      { width: 5.13 },  // G (Divider)
+      { width: 14.0 },  // H (Date)
+      { width: 12.0 },  // I (Amount)
+      { width: 22.0 },  // J (Description)
+      { width: 18.0 },  // K (Category)
+      { width: 5.13 }   // L (Margin)
+    ];
+
+    // Banner: Instructions
+    sheet.mergeCells('B1:K1');
+    const banner = sheet.getCell('B1');
+    banner.value = 'Change or add categories by updating the Expenses and Income tables in the Summary sheet.';
+    banner.font = { name: FONTS.body, size: 9.5, italic: true, color: { argb: PALETTE.lightText } };
+    banner.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.navy } };
+    banner.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    // Row 2: Table Section Titles
+    sheet.getCell('B2').value = 'Expenses';
+    sheet.getCell('B2').font = { name: FONTS.header, size: 18, bold: true, color: { argb: PALETTE.orange } };
+
+    sheet.getCell('H2').value = 'Income';
+    sheet.getCell('H2').font = { name: FONTS.header, size: 18, bold: true, color: { argb: PALETTE.orange } };
+
+    // Row 4: Column Headers
+    const headers = [
+      { cell: 'B4', text: 'Date', align: 'left' },
+      { cell: 'D4', text: 'Amount', align: 'right' },
+      { cell: 'E4', text: 'Description', align: 'left' },
+      { cell: 'F4', text: 'Category', align: 'left' },
+      { cell: 'H4', text: 'Date', align: 'left' },
+      { cell: 'I4', text: 'Amount', align: 'right' },
+      { cell: 'J4', text: 'Description', align: 'left' },
+      { cell: 'K4', text: 'Category', align: 'left' }
+    ];
+
+    for (const h of headers) {
+      const c = sheet.getCell(h.cell);
+      c.value = h.text;
+      c.font = { name: FONTS.body, size: 10.5, bold: true, color: { argb: PALETTE.navy } };
+      c.alignment = { horizontal: h.align as any, vertical: 'middle' };
+    }
+  }
+
+  /**
+   * Populates all user categories, budgets, and transactions into Summary & Transactions sheets.
+   */
+  private populateTransactionsAndSummary(summary: Worksheet, transactions: Worksheet, selectedMonth: string): void {
+    const rawExpenses = this.tracker.expenses().filter(e => e.month === selectedMonth);
+    const rawIncomes = this.tracker.incomes().filter(i => i.month === selectedMonth);
+    const rawBudgets = this.tracker.budgets().filter(b => b.month === selectedMonth);
+
+    // Sort chronologically
+    const expenses = [...rawExpenses].sort((a, b) => a.date.localeCompare(b.date));
+    const incomes = [...rawIncomes].sort((a, b) => a.date.localeCompare(b.date));
+
+    // Calculate actuals by expense category
+    const actualExpenseByCat = new Map<string, number>();
+    for (const exp of expenses) {
+      const cat = exp.category.trim();
+      actualExpenseByCat.set(cat, (actualExpenseByCat.get(cat) || 0) + Number(exp.amount));
+    }
+
+    // Calculate actuals by income category
+    const actualIncomeByCat = new Map<string, number>();
+    for (const inc of incomes) {
+      const cat = inc.source.trim();
+      actualIncomeByCat.set(cat, (actualIncomeByCat.get(cat) || 0) + Number(inc.amount));
+    }
+
+    // Build consolidated unique list of expense categories
+    const budgetMap = new Map<string, number>();
+    for (const b of rawBudgets) {
+      budgetMap.set(b.category.trim(), Number(b.plannedAmount) || 0);
+    }
+
+    const allExpenseCategories = Array.from(new Set([
+      ...Array.from(budgetMap.keys()),
+      ...Array.from(actualExpenseByCat.keys())
+    ])).filter(c => !!c);
+
+    // Build consolidated unique list of income categories
+    const allIncomeCategories = Array.from(new Set([
+      'Paycheck', 'Bonus', 'Interest', 'Savings', 'Other',
+      ...Array.from(actualIncomeByCat.keys())
+    ])).filter(c => !!c);
+
+    // Hairline border
+    const hairBorder = {
+      top: { style: 'hair' as const, color: { argb: PALETTE.borderHair } },
+      bottom: { style: 'hair' as const, color: { argb: PALETTE.borderHair } }
+    };
+
+    // 1. Populate Transactions sheet starting at Row 6
+    const maxEntries = Math.max(expenses.length, incomes.length);
+    for (let i = 0; i < maxEntries; i++) {
+      const r = 6 + i;
+      const row = transactions.getRow(r);
+      row.height = 19.5;
+
+      // Expenses on left (Cols B, D, E, F)
+      if (i < expenses.length) {
+        const exp = expenses[i];
+
+        const dCell = row.getCell('B');
+        dCell.value = new Date(exp.date + 'T00:00:00.000Z');
+        dCell.numFmt = 'd"-"mmm"-"yyyy';
+        dCell.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.mutedText } };
+        dCell.border = hairBorder;
+
+        const aCell = row.getCell('D');
+        aCell.value = Number(exp.amount);
+        aCell.numFmt = '[$₹]#,##0';
+        aCell.font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.amountText } };
+        aCell.alignment = { horizontal: 'right', vertical: 'bottom' };
+        aCell.border = hairBorder;
+
+        const descCell = row.getCell('E');
+        descCell.value = exp.note || '-';
+        descCell.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.descText } };
+        descCell.border = hairBorder;
+
+        const catCell = row.getCell('F');
+        catCell.value = exp.category;
+        catCell.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.mutedText } };
+        catCell.border = hairBorder;
+      }
+
+      // Incomes on right (Cols H, I, J, K)
+      if (i < incomes.length) {
+        const inc = incomes[i];
+
+        const dCell = row.getCell('H');
+        dCell.value = new Date(inc.date + 'T00:00:00.000Z');
+        dCell.numFmt = 'd"-"mmm"-"yyyy';
+        dCell.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.mutedText } };
+        dCell.border = hairBorder;
+
+        const aCell = row.getCell('I');
+        aCell.value = Number(inc.amount);
+        aCell.numFmt = '[$₹]#,##0';
+        aCell.font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.amountText } };
+        aCell.alignment = { horizontal: 'right', vertical: 'bottom' };
+        aCell.border = hairBorder;
+
+        const descCell = row.getCell('J');
+        descCell.value = inc.note || '-';
+        descCell.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.amountText } };
+        descCell.border = hairBorder;
+
+        const catCell = row.getCell('K');
+        catCell.value = inc.source;
+        catCell.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.mutedText } };
+        catCell.border = hairBorder;
+      }
+    }
+
+    // 2. Populate Expense Categories in Summary (Rows 28 to 44)
+    let totalPlannedExpenses = 0;
+    let totalActualExpenses = 0;
+
+    for (let idx = 0; idx < 17; idx++) {
+      const r = 28 + idx;
+      const cat = allExpenseCategories[idx];
+
+      const bCell = summary.getCell(`B${r}`);
+      const dCell = summary.getCell(`D${r}`);
+      const eCell = summary.getCell(`E${r}`);
+      const fCell = summary.getCell(`F${r}`);
+
+      if (cat) {
+        const planned = budgetMap.get(cat) || 0;
+        const actual = actualExpenseByCat.get(cat) || 0;
+        totalPlannedExpenses += planned;
+        totalActualExpenses += actual;
+
+        bCell.value = cat;
+        bCell.font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.darkText } };
+
+        dCell.value = planned;
+        dCell.numFmt = '[$₹]#,##0';
+        dCell.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.darkText } };
+        dCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.peachFill } };
+        dCell.alignment = { horizontal: 'right' };
+
+        eCell.value = {
+          formula: `if(isblank($B${r}), "", sumif(Transactions!$F:$F,$B${r},Transactions!$D:$D))`,
+          result: actual
+        };
+        eCell.numFmt = '[$₹]#,##0';
+        eCell.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.darkText } };
+        eCell.alignment = { horizontal: 'right' };
+
+        fCell.value = {
+          formula: `if(isblank($B${r}), "", D${r}-E${r})`,
+          result: planned - actual
+        };
+        fCell.numFmt = '[$₹]#,##0';
+        fCell.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.mutedText } };
+        fCell.alignment = { horizontal: 'right' };
+      } else {
+        bCell.value = '';
+        dCell.value = null;
+        dCell.fill = { type: 'pattern', pattern: 'none' };
+        eCell.value = {
+          formula: `if(isblank($B${r}), "", sumif(Transactions!$F:$F,$B${r},Transactions!$D:$D))`,
+          result: undefined
+        };
+        fCell.value = {
+          formula: `if(isblank($B${r}), "", D${r}-E${r})`,
+          result: undefined
+        };
+      }
+    }
+
+    // 3. Populate Income Categories in Summary (Rows 28 to 42)
+    let totalPlannedIncome = 0;
+    let totalActualIncome = 0;
+
+    for (let idx = 0; idx < 15; idx++) {
+      const r = 28 + idx;
+      const cat = allIncomeCategories[idx];
+
+      const hCell = summary.getCell(`H${r}`);
+      const jCell = summary.getCell(`J${r}`);
+      const kCell = summary.getCell(`K${r}`);
+      const lCell = summary.getCell(`L${r}`);
+
+      if (cat) {
+        const actual = actualIncomeByCat.get(cat) || 0;
+        const planned = (cat.toLowerCase() === 'paycheck' && actual > 0) ? actual : 0;
+        totalPlannedIncome += planned;
+        totalActualIncome += actual;
+
+        hCell.value = cat;
+        hCell.font = { name: FONTS.body, size: 10, bold: true, color: { argb: PALETTE.darkText } };
+
+        jCell.value = planned;
+        jCell.numFmt = '[$₹]#,##0';
+        jCell.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.darkText } };
+        jCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PALETTE.peachFill } };
+        jCell.alignment = { horizontal: 'right' };
+
+        kCell.value = {
+          formula: `if(isblank($H${r}), "", sumif(Transactions!$K:$K,$H${r},Transactions!$I:$I))`,
+          result: actual
+        };
+        kCell.numFmt = '[$₹]#,##0';
+        kCell.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.darkText } };
+        kCell.alignment = { horizontal: 'right' };
+
+        lCell.value = {
+          formula: `if(isblank($H${r}), "", K${r}-J${r})`,
+          result: actual - planned
+        };
+        lCell.numFmt = '[$₹]#,##0';
+        lCell.font = { name: FONTS.body, size: 10, color: { argb: PALETTE.mutedText } };
+        lCell.alignment = { horizontal: 'right' };
+      } else {
+        hCell.value = '';
+        jCell.value = null;
+        jCell.fill = { type: 'pattern', pattern: 'none' };
+        kCell.value = {
+          formula: `if(isblank($H${r}), "", sumif(Transactions!$K:$K,$H${r},Transactions!$I:$I))`,
+          result: undefined
+        };
+        lCell.value = {
+          formula: `if(isblank($H${r}), "", K${r}-J${r})`,
+          result: undefined
+        };
+      }
+    }
+
+    // 4. Update Summary Totals on Row 26
+    summary.getCell('D26').value = { formula: 'sum(D27:D44)', result: totalPlannedExpenses };
+    summary.getCell('D26').numFmt = '[$₹]#,##0';
+    summary.getCell('D26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    summary.getCell('D26').alignment = { horizontal: 'right' };
+
+    summary.getCell('E26').value = { formula: 'sum(E27:E44)', result: totalActualExpenses };
+    summary.getCell('E26').numFmt = '[$₹]#,##0';
+    summary.getCell('E26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    summary.getCell('E26').alignment = { horizontal: 'right' };
+
+    summary.getCell('F26').value = { formula: 'sum(F27:F44)', result: totalPlannedExpenses - totalActualExpenses };
+    summary.getCell('F26').numFmt = '[$₹]#,##0';
+    summary.getCell('F26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    summary.getCell('F26').alignment = { horizontal: 'right' };
+
+    summary.getCell('J26').value = { formula: 'sum(J27:J42)', result: totalPlannedIncome };
+    summary.getCell('J26').numFmt = '[$₹]#,##0';
+    summary.getCell('J26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    summary.getCell('J26').alignment = { horizontal: 'right' };
+
+    summary.getCell('K26').value = { formula: 'sum(K27:K42)', result: totalActualIncome };
+    summary.getCell('K26').numFmt = '[$₹]#,##0';
+    summary.getCell('K26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    summary.getCell('K26').alignment = { horizontal: 'right' };
+
+    summary.getCell('L26').value = { formula: 'sum(L27:L42)', result: totalActualIncome - totalPlannedIncome };
+    summary.getCell('L26').numFmt = '[$₹]#,##0';
+    summary.getCell('L26').font = { name: FONTS.body, size: 9.5, bold: true, color: { argb: PALETTE.mutedText } };
+    summary.getCell('L26').alignment = { horizontal: 'right' };
+
+    // 5. Update KPI Cards & Top Bars
+    summary.getCell('C21').value = { formula: 'D26', result: totalPlannedExpenses };
+    summary.getCell('C22').value = { formula: 'E26', result: totalActualExpenses };
+    summary.getCell('I21').value = { formula: 'J26', result: totalPlannedIncome };
+    summary.getCell('I22').value = { formula: 'K26', result: totalActualIncome };
+
+    const startingBalance = Number(summary.getCell('L8').value) || 0;
+    const netSavings = totalActualIncome - totalActualExpenses;
+    const endBalance = startingBalance + netSavings;
+
+    summary.getCell('D17').value = { formula: 'if(isblank(L8),0,L8)', result: startingBalance };
+    summary.getCell('E17').value = { formula: 'D17+(I22-C22)', result: endBalance };
+
+    summary.getCell('I15').value = { formula: 'iferror(E17-D17, 0)', result: netSavings };
+    summary.getCell('I16').value = {
+      formula: 'if(J15<0, "Spent this month", "Saved this month")',
+      result: netSavings >= 0 ? 'Saved this month' : 'Spent this month'
+    };
+
+    summary.getCell('I13').value = {
+      formula: 'iferror(E17/D17-1, "")',
+      result: startingBalance > 0 ? (netSavings / startingBalance) : 0
+    };
+    summary.getCell('I14').value = {
+      formula: 'if(I13 < 0, "Decrease in total savings", "Increase in total savings")',
+      result: netSavings < 0 ? 'Decrease in total savings' : 'Increase in total savings'
+    };
+  }
+
+  /**
+   * Browser file download helper
    */
   private downloadBlob(saveAsFn: any, blob: Blob, fileName: string): void {
     try {
@@ -78,8 +705,8 @@ export class ExcelExportService {
         saveAsFn(blob, fileName);
         return;
       }
-    } catch (e) {
-      // Fallback to DOM anchor tag
+    } catch {
+      // Fallback
     }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -89,717 +716,5 @@ export class ExcelExportService {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }
-
-  /**
-   * Builds Tab 1: Overview & Analytics (Executive KPIs, Budget Matrix, and Embedded Charts)
-   */
-  private async buildOverviewSheet(workbook: Workbook, selectedMonth: string, isDark: boolean): Promise<void> {
-    const sheet = workbook.addWorksheet('Overview & Analytics', {
-      properties: { tabColor: { argb: 'FF4338CA' } },
-      views: [{ showGridLines: true }]
-    });
-
-    // Set Column Widths
-    sheet.columns = [
-      { width: 24 }, // A: Metric / Category
-      { width: 20 }, // B: Value / Planned
-      { width: 20 }, // C: Actual
-      { width: 20 }, // D: Variance
-      { width: 16 }, // E: % Used
-      { width: 16 }, // F: Status
-      { width: 14 }  // G: Spacer
-    ];
-
-    // --- Row 1-2: Title Header Banner ---
-    sheet.mergeCells('A1:F2');
-    const titleCell = sheet.getCell('A1');
-    titleCell.value = 'EXPENSE & BUDGET TRACKER — EXECUTIVE SUMMARY';
-    titleCell.font = { name: 'Calibri', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-    titleCell.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF1E1B4B' } // Deep Navy / Indigo
-    };
-    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-
-    // --- Row 3: Metadata Row ---
-    sheet.mergeCells('A3:F3');
-    const metaCell = sheet.getCell('A3');
-    const now = new Date();
-    metaCell.value = `Reporting Period: ${selectedMonth}   |   Exported: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}   |   Currency: INR (₹)`;
-    metaCell.font = { name: 'Calibri', size: 9.5, italic: true, color: { argb: 'FF64748B' } };
-    metaCell.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFF1F5F9' }
-    };
-    metaCell.alignment = { horizontal: 'center', vertical: 'middle' };
-
-    // --- Row 5: KPI Section Header ---
-    sheet.mergeCells('A5:F5');
-    const kpiHeader = sheet.getCell('A5');
-    kpiHeader.value = '1. MONTHLY KEY PERFORMANCE INDICATORS (KPIs)';
-    kpiHeader.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-    kpiHeader.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF312E81' } // Darker Indigo
-    };
-    kpiHeader.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-
-    // KPI Rows: Inflow, Budget, Outflow, Net Savings, Savings Rate
-    const totalInflow = this.tracker.totalInflow();
-    const totalBudget = this.tracker.totalBudget();
-    const actualOutflow = this.tracker.actualOutflow();
-    const netSavings = this.tracker.netSavings();
-    const savingsRate = totalInflow > 0 ? (netSavings / totalInflow) : 0;
-
-    const kpiData = [
-      { label: 'Total Inflow (Revenue)', value: totalInflow, format: '"₹"#,##0.00', bg: 'FFECFDF5', fg: 'FF065F46' },
-      { label: 'Total Budget (Planned)', value: totalBudget, format: '"₹"#,##0.00', bg: 'FFF5F3FF', fg: 'FF5B21B6' },
-      { label: 'Actual Outflow (Spent)', value: actualOutflow, format: '"₹"#,##0.00', bg: 'FFFFFBEB', fg: 'FF92400E' },
-      { label: 'Net Savings (Balance)', value: netSavings, format: '"₹"#,##0.00', bg: netSavings >= 0 ? 'FFECFDF5' : 'FFFFF1F2', fg: netSavings >= 0 ? 'FF047857' : 'FFBE123C' },
-      { label: 'Monthly Savings Rate', value: savingsRate, format: '0.0%', bg: savingsRate >= 0 ? 'FFEFF6FF' : 'FFFFF1F2', fg: savingsRate >= 0 ? 'FF1E40AF' : 'FFBE123C' }
-    ];
-
-    let rowIdx = 6;
-    for (const kpi of kpiData) {
-      sheet.mergeCells(`A${rowIdx}:C${rowIdx}`);
-      const lCell = sheet.getCell(`A${rowIdx}`);
-      lCell.value = kpi.label;
-      lCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF334155' } };
-      lCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-      lCell.border = this.getThinBorder();
-
-      sheet.mergeCells(`D${rowIdx}:F${rowIdx}`);
-      const vCell = sheet.getCell(`D${rowIdx}`);
-      vCell.value = kpi.value;
-      vCell.numFmt = kpi.format;
-      vCell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: kpi.fg } };
-      vCell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: kpi.bg }
-      };
-      vCell.alignment = { horizontal: 'right', vertical: 'middle' };
-      vCell.border = this.getThinBorder();
-
-      rowIdx++;
-    }
-
-    // --- Row idx + 1: Budget Performance Section Header ---
-    rowIdx++;
-    sheet.mergeCells(`A${rowIdx}:F${rowIdx}`);
-    const bpHeader = sheet.getCell(`A${rowIdx}`);
-    bpHeader.value = '2. BUDGET VS. ACTUAL OUTFLOW PERFORMANCE';
-    bpHeader.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-    bpHeader.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF312E81' }
-    };
-    bpHeader.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-
-    // Performance Table Column Headers
-    rowIdx++;
-    const headers = ['Category', 'Planned Limit (₹)', 'Actual Spent (₹)', 'Remaining (₹)', 'Utilized (%)', 'Status'];
-    const colLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
-
-    headers.forEach((h, i) => {
-      const cell = sheet.getCell(`${colLetters[i]}${rowIdx}`);
-      cell.value = h;
-      cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF4F46E5' } // Indigo-600
-      };
-      cell.alignment = {
-        horizontal: i === 0 ? 'left' : (i === 5 ? 'center' : 'right'),
-        vertical: 'middle'
-      };
-      cell.border = this.getThinBorder();
-    });
-
-    const comparisonData = this.tracker.budgetComparison();
-    const dataStartRow = rowIdx + 1;
-
-    if (comparisonData.length === 0) {
-      rowIdx++;
-      sheet.mergeCells(`A${rowIdx}:F${rowIdx}`);
-      const emptyCell = sheet.getCell(`A${rowIdx}`);
-      emptyCell.value = 'No budget or expense allocations recorded for this month.';
-      emptyCell.font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FF94A3B8' } };
-      emptyCell.alignment = { horizontal: 'center', vertical: 'middle' };
-      emptyCell.border = this.getThinBorder();
-    } else {
-      for (const row of comparisonData) {
-        rowIdx++;
-        const zebraBg = (rowIdx % 2 === 0) ? 'FFFFFFFF' : 'FFF8FAFC';
-
-        // A: Category
-        const cCell = sheet.getCell(`A${rowIdx}`);
-        cCell.value = row.category + (row.isUnplanned ? ' (Unplanned)' : '');
-        cCell.font = { name: 'Calibri', size: 10, bold: false, color: { argb: 'FF0F172A' } };
-        cCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        cCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        cCell.border = this.getThinBorder();
-
-        // B: Planned Amount
-        const pCell = sheet.getCell(`B${rowIdx}`);
-        pCell.value = row.plannedAmount;
-        pCell.numFmt = '"₹"#,##0.00';
-        pCell.font = { name: 'Calibri', size: 10 };
-        pCell.alignment = { horizontal: 'right', vertical: 'middle' };
-        pCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        pCell.border = this.getThinBorder();
-
-        // C: Actual Amount
-        const aCell = sheet.getCell(`C${rowIdx}`);
-        aCell.value = row.actualAmount;
-        aCell.numFmt = '"₹"#,##0.00';
-        aCell.font = { name: 'Calibri', size: 10 };
-        aCell.alignment = { horizontal: 'right', vertical: 'middle' };
-        aCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        aCell.border = this.getThinBorder();
-
-        // D: Remaining (Formula)
-        const rCell = sheet.getCell(`D${rowIdx}`);
-        rCell.value = { formula: `B${rowIdx}-C${rowIdx}`, result: row.remainingAmount };
-        rCell.numFmt = '"₹"#,##0.00;[Red]-"₹"#,##0.00;"₹0.00"';
-        rCell.font = { name: 'Calibri', size: 10, color: { argb: row.remainingAmount < 0 ? 'FFBE123C' : 'FF047857' } };
-        rCell.alignment = { horizontal: 'right', vertical: 'middle' };
-        rCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        rCell.border = this.getThinBorder();
-
-        // E: Utilized % (Formula)
-        const uCell = sheet.getCell(`E${rowIdx}`);
-        uCell.value = { formula: `IF(B${rowIdx}>0, C${rowIdx}/B${rowIdx}, 1)`, result: (row.percentUsed / 100) };
-        uCell.numFmt = '0.0%';
-        uCell.font = { name: 'Calibri', size: 10 };
-        uCell.alignment = { horizontal: 'right', vertical: 'middle' };
-        uCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        uCell.border = this.getThinBorder();
-
-        // F: Status Badge
-        const sCell = sheet.getCell(`F${rowIdx}`);
-        sCell.value = row.status;
-        const isOver = row.status === 'Over Budget';
-        sCell.font = { name: 'Calibri', size: 9.5, bold: true, color: { argb: isOver ? 'FF9F1239' : 'FF065F46' } };
-        sCell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: isOver ? 'FFFFE4E6' : 'FFD1FAE5' }
-        };
-        sCell.alignment = { horizontal: 'center', vertical: 'middle' };
-        sCell.border = this.getThinBorder();
-      }
-
-      // Summary Total Row
-      rowIdx++;
-      const dataEndRow = rowIdx - 1;
-
-      const totLabel = sheet.getCell(`A${rowIdx}`);
-      totLabel.value = 'Total Monthly Portfolio';
-      totLabel.font = { name: 'Calibri', size: 10.5, bold: true, color: { argb: 'FF1E1B4B' } };
-      totLabel.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-      totLabel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
-      totLabel.border = this.getTotalBorder();
-
-      const totPlan = sheet.getCell(`B${rowIdx}`);
-      totPlan.value = { formula: `SUM(B${dataStartRow}:B${dataEndRow})`, result: totalBudget };
-      totPlan.numFmt = '"₹"#,##0.00';
-      totPlan.font = { name: 'Calibri', size: 10.5, bold: true };
-      totPlan.alignment = { horizontal: 'right', vertical: 'middle' };
-      totPlan.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
-      totPlan.border = this.getTotalBorder();
-
-      const totAct = sheet.getCell(`C${rowIdx}`);
-      totAct.value = { formula: `SUM(C${dataStartRow}:C${dataEndRow})`, result: actualOutflow };
-      totAct.numFmt = '"₹"#,##0.00';
-      totAct.font = { name: 'Calibri', size: 10.5, bold: true };
-      totAct.alignment = { horizontal: 'right', vertical: 'middle' };
-      totAct.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
-      totAct.border = this.getTotalBorder();
-
-      const totRem = sheet.getCell(`D${rowIdx}`);
-      totRem.value = { formula: `SUM(D${dataStartRow}:D${dataEndRow})`, result: totalBudget - actualOutflow };
-      totRem.numFmt = '"₹"#,##0.00;[Red]-"₹"#,##0.00;"₹0.00"';
-      totRem.font = { name: 'Calibri', size: 10.5, bold: true, color: { argb: (totalBudget - actualOutflow) < 0 ? 'FFBE123C' : 'FF047857' } };
-      totRem.alignment = { horizontal: 'right', vertical: 'middle' };
-      totRem.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
-      totRem.border = this.getTotalBorder();
-
-      const totUtil = sheet.getCell(`E${rowIdx}`);
-      totUtil.value = { formula: `IF(B${rowIdx}>0, C${rowIdx}/B${rowIdx}, 0)`, result: totalBudget > 0 ? (actualOutflow / totalBudget) : 0 };
-      totUtil.numFmt = '0.0%';
-      totUtil.font = { name: 'Calibri', size: 10.5, bold: true };
-      totUtil.alignment = { horizontal: 'right', vertical: 'middle' };
-      totUtil.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
-      totUtil.border = this.getTotalBorder();
-
-      const totStatus = sheet.getCell(`F${rowIdx}`);
-      const overallOver = actualOutflow > totalBudget;
-      totStatus.value = overallOver ? 'Over Budget' : 'On Track';
-      totStatus.font = { name: 'Calibri', size: 10, bold: true, color: { argb: overallOver ? 'FF9F1239' : 'FF065F46' } };
-      totStatus.alignment = { horizontal: 'center', vertical: 'middle' };
-      totStatus.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
-      totStatus.border = this.getTotalBorder();
-    }
-
-    // --- Embedded Chart Snapshots ---
-    rowIdx += 2;
-    sheet.mergeCells(`A${rowIdx}:F${rowIdx}`);
-    const chartHeader = sheet.getCell(`A${rowIdx}`);
-    chartHeader.value = '3. VISUAL ANALYTICS SNAPSHOTS (EMBEDDED CHARTS)';
-    chartHeader.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-    chartHeader.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF312E81' }
-    };
-    chartHeader.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-
-    rowIdx++;
-    const chartPlacementRow = rowIdx;
-
-    // Capture Bar Chart Canvas
-    const barCanvas = document.getElementById('bar-chart-canvas') as HTMLCanvasElement | null;
-    if (barCanvas) {
-      try {
-        const barImgBase64 = this.renderCanvasWithBackground(barCanvas, isDark);
-        const barImageId = workbook.addImage({
-          base64: barImgBase64,
-          extension: 'png'
-        });
-
-        sheet.addImage(barImageId, {
-          tl: { col: 0, row: chartPlacementRow },
-          ext: { width: 520, height: 260 }
-        });
-      } catch (err) {
-        console.warn('Failed to embed bar chart snapshot:', err);
-      }
-    }
-
-    // Capture Doughnut Chart Canvas
-    const pieCanvas = document.getElementById('doughnut-chart-canvas') as HTMLCanvasElement | null;
-    if (pieCanvas) {
-      try {
-        const pieImgBase64 = this.renderCanvasWithBackground(pieCanvas, isDark);
-        const pieImageId = workbook.addImage({
-          base64: pieImgBase64,
-          extension: 'png'
-        });
-
-        // Place doughnut chart below bar chart or adjacent
-        sheet.addImage(pieImageId, {
-          tl: { col: 0, row: chartPlacementRow + 15 },
-          ext: { width: 520, height: 260 }
-        });
-      } catch (err) {
-        console.warn('Failed to embed doughnut chart snapshot:', err);
-      }
-    }
-  }
-
-  /**
-   * Builds Tab 2: Detailed Income Log
-   */
-  private buildIncomeSheet(workbook: Workbook): void {
-    const sheet = workbook.addWorksheet('Income Log', {
-      properties: { tabColor: { argb: 'FF059669' } },
-      views: [{ showGridLines: true }]
-    });
-
-    sheet.columns = [
-      { width: 16 }, // A: Date
-      { width: 22 }, // B: Source
-      { width: 20 }, // C: Amount (₹)
-      { width: 16 }, // D: Month
-      { width: 30 }  // E: Notes / ID
-    ];
-
-    // Banner Header
-    sheet.mergeCells('A1:E1');
-    const header = sheet.getCell('A1');
-    header.value = 'INCOME & REVENUE LEDGER';
-    header.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
-    header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF065F46' } }; // Dark Emerald
-    header.alignment = { horizontal: 'center', vertical: 'middle' };
-
-    // Column Headers
-    const headers = ['Date', 'Source', 'Amount (₹)', 'Reporting Month', 'Entry ID / Reference'];
-    const colLetters = ['A', 'B', 'C', 'D', 'E'];
-
-    headers.forEach((h, i) => {
-      const cell = sheet.getCell(`${colLetters[i]}2`);
-      cell.value = h;
-      cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF059669' } };
-      cell.alignment = { horizontal: i === 2 ? 'right' : 'left', vertical: 'middle', indent: i === 2 ? 0 : 1 };
-      cell.border = this.getThinBorder();
-    });
-
-    const incomes = this.tracker.incomes();
-    let rowIdx = 2;
-
-    if (incomes.length === 0) {
-      rowIdx++;
-      sheet.mergeCells(`A${rowIdx}:E${rowIdx}`);
-      const emptyCell = sheet.getCell(`A${rowIdx}`);
-      emptyCell.value = 'No income records found.';
-      emptyCell.font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FF94A3B8' } };
-      emptyCell.alignment = { horizontal: 'center', vertical: 'middle' };
-      emptyCell.border = this.getThinBorder();
-    } else {
-      const dataStartRow = 3;
-      for (const item of incomes) {
-        rowIdx++;
-        const zebraBg = (rowIdx % 2 === 0) ? 'FFFFFFFF' : 'FFF8FAFC';
-
-        const dCell = sheet.getCell(`A${rowIdx}`);
-        dCell.value = item.date;
-        dCell.font = { name: 'Calibri', size: 10 };
-        dCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        dCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        dCell.border = this.getThinBorder();
-
-        const sCell = sheet.getCell(`B${rowIdx}`);
-        sCell.value = item.source;
-        sCell.font = { name: 'Calibri', size: 10, bold: true };
-        sCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        sCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        sCell.border = this.getThinBorder();
-
-        const aCell = sheet.getCell(`C${rowIdx}`);
-        aCell.value = Number(item.amount);
-        aCell.numFmt = '"₹"#,##0.00';
-        aCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF065F46' } };
-        aCell.alignment = { horizontal: 'right', vertical: 'middle' };
-        aCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        aCell.border = this.getThinBorder();
-
-        const mCell = sheet.getCell(`D${rowIdx}`);
-        mCell.value = item.month;
-        mCell.font = { name: 'Calibri', size: 10, color: { argb: 'FF64748B' } };
-        mCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        mCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        mCell.border = this.getThinBorder();
-
-        const idCell = sheet.getCell(`E${rowIdx}`);
-        idCell.value = item.note || item.id;
-        idCell.font = { name: 'Calibri', size: 9, color: { argb: 'FF94A3B8' } };
-        idCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        idCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        idCell.border = this.getThinBorder();
-      }
-
-      // Total Row
-      rowIdx++;
-      const dataEndRow = rowIdx - 1;
-
-      sheet.mergeCells(`A${rowIdx}:B${rowIdx}`);
-      const tLabel = sheet.getCell(`A${rowIdx}`);
-      tLabel.value = 'Total Cumulative Inflow';
-      tLabel.font = { name: 'Calibri', size: 10.5, bold: true, color: { argb: 'FF065F46' } };
-      tLabel.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-      tLabel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFDF5' } };
-      tLabel.border = this.getTotalBorder();
-
-      const tAmt = sheet.getCell(`C${rowIdx}`);
-      tAmt.value = { formula: `SUM(C${dataStartRow}:C${dataEndRow})` };
-      tAmt.numFmt = '"₹"#,##0.00';
-      tAmt.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF065F46' } };
-      tAmt.alignment = { horizontal: 'right', vertical: 'middle' };
-      tAmt.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFDF5' } };
-      tAmt.border = this.getTotalBorder();
-
-      sheet.mergeCells(`D${rowIdx}:E${rowIdx}`);
-      const tSpacer = sheet.getCell(`D${rowIdx}`);
-      tSpacer.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFDF5' } };
-      tSpacer.border = this.getTotalBorder();
-    }
-  }
-
-  /**
-   * Builds Tab 3: Detailed Monthly Budget Allocations
-   */
-  private buildBudgetSheet(workbook: Workbook): void {
-    const sheet = workbook.addWorksheet('Budget Planner', {
-      properties: { tabColor: { argb: 'FF7C3AED' } },
-      views: [{ showGridLines: true }]
-    });
-
-    sheet.columns = [
-      { width: 16 }, // A: Month
-      { width: 24 }, // B: Category
-      { width: 22 }, // C: Planned Allocation (₹)
-      { width: 26 }  // D: Allocation ID
-    ];
-
-    sheet.mergeCells('A1:D1');
-    const header = sheet.getCell('A1');
-    header.value = 'MONTHLY BUDGET ALLOCATIONS';
-    header.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
-    header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5B21B6' } };
-    header.alignment = { horizontal: 'center', vertical: 'middle' };
-
-    const headers = ['Reporting Month', 'Category', 'Planned Limit (₹)', 'Budget Allocation ID'];
-    const colLetters = ['A', 'B', 'C', 'D'];
-
-    headers.forEach((h, i) => {
-      const cell = sheet.getCell(`${colLetters[i]}2`);
-      cell.value = h;
-      cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF7C3AED' } };
-      cell.alignment = { horizontal: i === 2 ? 'right' : 'left', vertical: 'middle', indent: i === 2 ? 0 : 1 };
-      cell.border = this.getThinBorder();
-    });
-
-    const budgets = this.tracker.budgets();
-    let rowIdx = 2;
-
-    if (budgets.length === 0) {
-      rowIdx++;
-      sheet.mergeCells(`A${rowIdx}:D${rowIdx}`);
-      const emptyCell = sheet.getCell(`A${rowIdx}`);
-      emptyCell.value = 'No budget limits configured.';
-      emptyCell.font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FF94A3B8' } };
-      emptyCell.alignment = { horizontal: 'center', vertical: 'middle' };
-      emptyCell.border = this.getThinBorder();
-    } else {
-      const dataStartRow = 3;
-      for (const item of budgets) {
-        rowIdx++;
-        const zebraBg = (rowIdx % 2 === 0) ? 'FFFFFFFF' : 'FFF8FAFC';
-
-        const mCell = sheet.getCell(`A${rowIdx}`);
-        mCell.value = item.month;
-        mCell.font = { name: 'Calibri', size: 10 };
-        mCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        mCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        mCell.border = this.getThinBorder();
-
-        const cCell = sheet.getCell(`B${rowIdx}`);
-        cCell.value = item.category;
-        cCell.font = { name: 'Calibri', size: 10, bold: true };
-        cCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        cCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        cCell.border = this.getThinBorder();
-
-        const aCell = sheet.getCell(`C${rowIdx}`);
-        aCell.value = Number(item.plannedAmount);
-        aCell.numFmt = '"₹"#,##0.00';
-        aCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF5B21B6' } };
-        aCell.alignment = { horizontal: 'right', vertical: 'middle' };
-        aCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        aCell.border = this.getThinBorder();
-
-        const idCell = sheet.getCell(`D${rowIdx}`);
-        idCell.value = item.id;
-        idCell.font = { name: 'Calibri', size: 9, color: { argb: 'FF94A3B8' } };
-        idCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        idCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        idCell.border = this.getThinBorder();
-      }
-
-      // Total Row
-      rowIdx++;
-      const dataEndRow = rowIdx - 1;
-
-      sheet.mergeCells(`A${rowIdx}:B${rowIdx}`);
-      const tLabel = sheet.getCell(`A${rowIdx}`);
-      tLabel.value = 'Total Configured Budgets';
-      tLabel.font = { name: 'Calibri', size: 10.5, bold: true, color: { argb: 'FF5B21B6' } };
-      tLabel.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-      tLabel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F3FF' } };
-      tLabel.border = this.getTotalBorder();
-
-      const tAmt = sheet.getCell(`C${rowIdx}`);
-      tAmt.value = { formula: `SUM(C${dataStartRow}:C${dataEndRow})` };
-      tAmt.numFmt = '"₹"#,##0.00';
-      tAmt.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF5B21B6' } };
-      tAmt.alignment = { horizontal: 'right', vertical: 'middle' };
-      tAmt.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F3FF' } };
-      tAmt.border = this.getTotalBorder();
-
-      const tSpacer = sheet.getCell(`D${rowIdx}`);
-      tSpacer.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F3FF' } };
-      tSpacer.border = this.getTotalBorder();
-    }
-  }
-
-  /**
-   * Builds Tab 4: Detailed Expense Ledger
-   */
-  private buildExpenseSheet(workbook: Workbook): void {
-    const sheet = workbook.addWorksheet('Expense Ledger', {
-      properties: { tabColor: { argb: 'FFD97706' } },
-      views: [{ showGridLines: true }]
-    });
-
-    sheet.columns = [
-      { width: 16 }, // A: Date
-      { width: 22 }, // B: Category
-      { width: 20 }, // C: Amount (₹)
-      { width: 32 }, // D: Description / Note
-      { width: 16 }, // E: Month
-      { width: 24 }  // F: Expense ID
-    ];
-
-    sheet.mergeCells('A1:F1');
-    const header = sheet.getCell('A1');
-    header.value = 'DAILY EXPENSE TRANSACTION LEDGER';
-    header.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
-    header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF92400E' } };
-    header.alignment = { horizontal: 'center', vertical: 'middle' };
-
-    const headers = ['Date', 'Category', 'Amount (₹)', 'Description / Note', 'Reporting Month', 'Expense ID'];
-    const colLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
-
-    headers.forEach((h, i) => {
-      const cell = sheet.getCell(`${colLetters[i]}2`);
-      cell.value = h;
-      cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD97706' } };
-      cell.alignment = { horizontal: i === 2 ? 'right' : 'left', vertical: 'middle', indent: i === 2 ? 0 : 1 };
-      cell.border = this.getThinBorder();
-    });
-
-    const expenses = this.tracker.expenses();
-    let rowIdx = 2;
-
-    if (expenses.length === 0) {
-      rowIdx++;
-      sheet.mergeCells(`A${rowIdx}:F${rowIdx}`);
-      const emptyCell = sheet.getCell(`A${rowIdx}`);
-      emptyCell.value = 'No expenses logged.';
-      emptyCell.font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FF94A3B8' } };
-      emptyCell.alignment = { horizontal: 'center', vertical: 'middle' };
-      emptyCell.border = this.getThinBorder();
-    } else {
-      const dataStartRow = 3;
-      for (const item of expenses) {
-        rowIdx++;
-        const zebraBg = (rowIdx % 2 === 0) ? 'FFFFFFFF' : 'FFF8FAFC';
-
-        const dCell = sheet.getCell(`A${rowIdx}`);
-        dCell.value = item.date;
-        dCell.font = { name: 'Calibri', size: 10 };
-        dCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        dCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        dCell.border = this.getThinBorder();
-
-        const cCell = sheet.getCell(`B${rowIdx}`);
-        cCell.value = item.category;
-        cCell.font = { name: 'Calibri', size: 10, bold: true };
-        cCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        cCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        cCell.border = this.getThinBorder();
-
-        const aCell = sheet.getCell(`C${rowIdx}`);
-        aCell.value = Number(item.amount);
-        aCell.numFmt = '"₹"#,##0.00';
-        aCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFB45309' } };
-        aCell.alignment = { horizontal: 'right', vertical: 'middle' };
-        aCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        aCell.border = this.getThinBorder();
-
-        const nCell = sheet.getCell(`D${rowIdx}`);
-        nCell.value = item.note || '-';
-        nCell.font = { name: 'Calibri', size: 10 };
-        nCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        nCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        nCell.border = this.getThinBorder();
-
-        const mCell = sheet.getCell(`E${rowIdx}`);
-        mCell.value = item.month;
-        mCell.font = { name: 'Calibri', size: 10, color: { argb: 'FF64748B' } };
-        mCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        mCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        mCell.border = this.getThinBorder();
-
-        const idCell = sheet.getCell(`F${rowIdx}`);
-        idCell.value = item.id;
-        idCell.font = { name: 'Calibri', size: 9, color: { argb: 'FF94A3B8' } };
-        idCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-        idCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebraBg } };
-        idCell.border = this.getThinBorder();
-      }
-
-      // Total Row
-      rowIdx++;
-      const dataEndRow = rowIdx - 1;
-
-      sheet.mergeCells(`A${rowIdx}:B${rowIdx}`);
-      const tLabel = sheet.getCell(`A${rowIdx}`);
-      tLabel.value = 'Total Cumulative Expenditure';
-      tLabel.font = { name: 'Calibri', size: 10.5, bold: true, color: { argb: 'FF92400E' } };
-      tLabel.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-      tLabel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEB' } };
-      tLabel.border = this.getTotalBorder();
-
-      const tAmt = sheet.getCell(`C${rowIdx}`);
-      tAmt.value = { formula: `SUM(C${dataStartRow}:C${dataEndRow})` };
-      tAmt.numFmt = '"₹"#,##0.00';
-      tAmt.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF92400E' } };
-      tAmt.alignment = { horizontal: 'right', vertical: 'middle' };
-      tAmt.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEB' } };
-      tAmt.border = this.getTotalBorder();
-
-      sheet.mergeCells(`D${rowIdx}:F${rowIdx}`);
-      const tSpacer = sheet.getCell(`D${rowIdx}`);
-      tSpacer.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEB' } };
-      tSpacer.border = this.getTotalBorder();
-    }
-  }
-
-  /**
-   * Renders the given canvas onto an offscreen canvas with a high-contrast solid background
-   * ensuring crystal-clear readability when embedded into Excel.
-   */
-  private renderCanvasWithBackground(sourceCanvas: HTMLCanvasElement, isDark: boolean): string {
-    const offscreen = document.createElement('canvas');
-    offscreen.width = sourceCanvas.width;
-    offscreen.height = sourceCanvas.height;
-    const ctx = offscreen.getContext('2d');
-
-    if (!ctx) {
-      return sourceCanvas.toDataURL('image/png');
-    }
-
-    // Fill with high-contrast card background
-    ctx.fillStyle = isDark ? '#0F172A' : '#FFFFFF';
-    ctx.fillRect(0, 0, offscreen.width, offscreen.height);
-
-    // Draw the chart canvas over it
-    ctx.drawImage(sourceCanvas, 0, 0);
-
-    // Add a subtle border
-    ctx.strokeStyle = isDark ? '#334155' : '#E2E8F0';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(1, 1, offscreen.width - 2, offscreen.height - 2);
-
-    return offscreen.toDataURL('image/png');
-  }
-
-  private getThinBorder() {
-    return {
-      top: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
-      left: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
-      bottom: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
-      right: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } }
-    };
-  }
-
-  private getTotalBorder() {
-    return {
-      top: { style: 'thin' as const, color: { argb: 'FF94A3B8' } },
-      bottom: { style: 'double' as const, color: { argb: 'FF334155' } },
-      left: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
-      right: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } }
-    };
   }
 }
