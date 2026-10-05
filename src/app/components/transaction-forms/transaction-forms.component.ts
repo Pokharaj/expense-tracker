@@ -2,6 +2,7 @@ import { Component, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TrackerService } from '../../services/tracker.service';
+import { EXPENSE_CATEGORIES, INCOME_SOURCES } from '../../models/tracker.model';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
@@ -73,12 +74,9 @@ import { IconComponent } from '../icon/icon.component';
                 required
                 class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark] cursor-pointer"
               >
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Paycheck">Paycheck</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Interest">Interest</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Freelance">Freelance</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Investment">Investment</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Bonus">Bonus</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Other">Other</option>
+                @for (src of incomeSources; track src) {
+                  <option class="dark:bg-slate-800 dark:text-slate-100" [value]="src">{{ src }}</option>
+                }
               </select>
             </div>
 
@@ -131,15 +129,9 @@ import { IconComponent } from '../icon/icon.component';
                 required
                 class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 dark:focus:border-purple-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark] cursor-pointer"
               >
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Groceries">Groceries</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Utilities">Utilities</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Entertainment">Entertainment</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Rent">Rent</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Transportation">Transportation</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Dining">Dining</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Healthcare">Healthcare</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Shopping">Shopping</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Other">Other</option>
+                @for (cat of categories; track cat) {
+                  <option class="dark:bg-slate-800 dark:text-slate-100" [value]="cat">{{ cat }}</option>
+                }
               </select>
             </div>
 
@@ -206,15 +198,9 @@ import { IconComponent } from '../icon/icon.component';
                 required
                 class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark] cursor-pointer"
               >
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Groceries">Groceries</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Utilities">Utilities</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Entertainment">Entertainment</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Rent">Rent</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Transportation">Transportation</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Dining">Dining</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Healthcare">Healthcare</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Shopping">Shopping</option>
-                <option class="dark:bg-slate-800 dark:text-slate-100" value="Other">Other</option>
+                @for (cat of categories; track cat) {
+                  <option class="dark:bg-slate-800 dark:text-slate-100" [value]="cat">{{ cat }}</option>
+                }
               </select>
             </div>
 
@@ -260,6 +246,8 @@ import { IconComponent } from '../icon/icon.component';
 })
 export class TransactionFormsComponent {
   readonly tracker = inject(TrackerService);
+  readonly categories = EXPENSE_CATEGORIES;
+  readonly incomeSources = INCOME_SOURCES;
 
   private getTodayStr(): string {
     const d = new Date();

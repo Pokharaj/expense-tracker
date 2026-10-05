@@ -439,10 +439,64 @@ export class ExcelExportService {
       budgetMap.set(b.category.trim(), Number(b.plannedAmount) || 0);
     }
 
-    const allExpenseCategories = Array.from(new Set([
+    // Standard categories aligned with Budget September 2026.xlsx template rows:
+    // Rows 28-41: Groceries, Dining, Healthcare, Rent, Insurance, Petrol,
+    // Subscriptions, Transportation, Personal, Utilities, Shopping, Gifts/Donation, Other, Gym/Sports
+    // Followed by Entertainment and any user-defined categories.
+    const standardCategories: string[] = [
+      'Groceries',
+      'Dining',
+      'Healthcare',
+      'Rent',
+      'Insurance',
+      'Petrol',
+      'Subscriptions',
+      'Transportation',
+      'Personal',
+      'Utilities',
+      'Shopping',
+      'Gifts/Donation',
+      'Other',
+      'Gym/Sports',
+      'Entertainment'
+    ];
+
+    const getCategoryAmount = (categoryName: string, amountMap: Map<string, number>): number => {
+      if (amountMap.has(categoryName)) {
+        return amountMap.get(categoryName) || 0;
+      }
+      const targetLower = categoryName.trim().toLowerCase();
+      for (const [key, val] of amountMap.entries()) {
+        const keyLower = key.trim().toLowerCase();
+        if (keyLower === targetLower) return val;
+        if ((keyLower === 'dining' || keyLower === 'dineout') && (targetLower === 'dining' || targetLower === 'dineout')) return val;
+        if ((keyLower === 'healthcare' || keyLower === 'health/medical') && (targetLower === 'healthcare' || targetLower === 'health/medical')) return val;
+        if ((keyLower === 'rent' || keyLower === 'home rent') && (targetLower === 'rent' || targetLower === 'home rent')) return val;
+        if ((keyLower === 'transportation' || keyLower === 'travel/transportation') && (targetLower === 'transportation' || targetLower === 'travel/transportation')) return val;
+      }
+      return 0;
+    };
+
+    const userCategories = Array.from(new Set([
       ...Array.from(budgetMap.keys()),
       ...Array.from(actualExpenseByCat.keys())
-    ])).filter(c => !!c);
+    ])).filter(c => {
+      const cLower = c.trim().toLowerCase();
+      return !standardCategories.some(s => {
+        const sLower = s.toLowerCase();
+        if (sLower === cLower) return true;
+        if ((sLower === 'dining' || sLower === 'dineout') && (cLower === 'dining' || cLower === 'dineout')) return true;
+        if ((sLower === 'healthcare' || sLower === 'health/medical') && (cLower === 'healthcare' || cLower === 'health/medical')) return true;
+        if ((sLower === 'rent' || sLower === 'home rent') && (cLower === 'rent' || cLower === 'home rent')) return true;
+        if ((sLower === 'transportation' || sLower === 'travel/transportation') && (cLower === 'transportation' || cLower === 'travel/transportation')) return true;
+        return false;
+      });
+    });
+
+    const allExpenseCategories = [
+      ...standardCategories,
+      ...userCategories
+    ];
 
     // Build consolidated unique list of income categories
     const allIncomeCategories = Array.from(new Set([
@@ -534,8 +588,8 @@ export class ExcelExportService {
       const fCell = summary.getCell(`F${r}`);
 
       if (cat) {
-        const planned = budgetMap.get(cat) || 0;
-        const actual = actualExpenseByCat.get(cat) || 0;
+        const planned = getCategoryAmount(cat, budgetMap);
+        const actual = getCategoryAmount(cat, actualExpenseByCat);
         totalPlannedExpenses += planned;
         totalActualExpenses += actual;
 

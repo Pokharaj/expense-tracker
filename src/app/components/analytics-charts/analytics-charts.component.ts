@@ -224,19 +224,30 @@ export class AnalyticsChartsComponent implements AfterViewInit, OnDestroy {
 
     const pieLabels = categoryTotals.size > 0 ? Array.from(categoryTotals.keys()) : ['No Expenses'];
     const pieData = categoryTotals.size > 0 ? Array.from(categoryTotals.values()) : [1];
+    const categoryColorPalette = [
+      '#3B82F6', // Blue
+      '#EC4899', // Pink
+      '#10B981', // Emerald
+      '#F59E0B', // Amber
+      '#8B5CF6', // Purple
+      '#6366F1', // Indigo
+      '#14B8A6', // Teal
+      '#F97316', // Orange
+      '#06B6D4', // Cyan
+      '#84CC16', // Lime
+      '#E11D48', // Rose
+      '#A855F7', // Violet
+      '#0EA5E9', // Sky
+      '#D97706', // Warm Amber
+      '#64748B', // Slate
+      '#4F46E5'  // Deep Indigo
+    ];
+
     const pieColors =
       categoryTotals.size > 0
-        ? [
-            '#3B82F6',
-            '#EC4899',
-            '#10B981',
-            '#F59E0B',
-            '#8B5CF6',
-            '#6366F1',
-            '#14B8A6',
-            '#F97316'
-          ]
+        ? pieLabels.map((_, idx) => categoryColorPalette[idx % categoryColorPalette.length])
         : [isDark ? '#334155' : '#E2E8F0'];
+
 
     if (this.pieChartInstance) {
       this.pieChartInstance.data.labels = pieLabels;
