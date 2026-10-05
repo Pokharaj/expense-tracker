@@ -51,6 +51,7 @@ import { IconComponent } from '../icon/icon.component';
           >
             <button
               type="button"
+              id="theme-btn-light"
               (click)="themeService.setTheme('light')"
               [ngClass]="themeService.theme() === 'light'
                 ? 'bg-white dark:bg-slate-700 text-amber-500 shadow-xs font-semibold'
@@ -64,6 +65,7 @@ import { IconComponent } from '../icon/icon.component';
 
             <button
               type="button"
+              id="theme-btn-dark"
               (click)="themeService.setTheme('dark')"
               [ngClass]="themeService.theme() === 'dark'
                 ? 'bg-white dark:bg-slate-700 text-indigo-400 shadow-xs font-semibold'
@@ -77,6 +79,7 @@ import { IconComponent } from '../icon/icon.component';
 
             <button
               type="button"
+              id="theme-btn-system"
               (click)="themeService.setTheme('system')"
               [ngClass]="themeService.theme() === 'system'
                 ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-xs font-semibold'

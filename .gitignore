@@ -43,4 +43,4 @@ Thumbs.db
 
 # Test artifacts
 e2e-artifacts/
-e2e-test-suite.cjs
+e2e-*.cjs
