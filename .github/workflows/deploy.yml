@@ -31,17 +31,21 @@ jobs:
           node-version: 22
           cache: 'npm'
 
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
       - name: Install Dependencies
         run: npm ci --legacy-peer-deps
 
       - name: Build for GitHub Pages
         run: npm run build:gh-pages
 
-      - name: Verify 404 Fallback
+      - name: Verify 404 & NoJekyll
         run: |
           test -f dist/expense-tracker/browser/index.html || (echo "index.html missing!" && exit 1)
           test -f dist/expense-tracker/browser/404.html || (echo "404.html fallback missing!" && exit 1)
-          echo "Build artifact verified successfully with 404.html SPA fallback."
+          test -f dist/expense-tracker/browser/.nojekyll || (echo ".nojekyll missing!" && exit 1)
+          echo "Build artifact verified successfully with 404.html SPA fallback and .nojekyll."
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
