@@ -149,7 +149,7 @@ import { IconComponent } from '../icon/icon.component';
                       {{ item.date }}
                     </td>
                     <td class="py-3.5 px-4 sm:px-6 font-bold text-emerald-600 dark:text-emerald-400">
-                      {{ item.amount | inrCurrency:true }}
+                      {{ item.amount | inrCurrency }}
                     </td>
                     <td class="py-3.5 px-4 sm:px-6 font-semibold text-slate-800 dark:text-slate-200">
                       <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 dark:border dark:border-blue-800/40">
