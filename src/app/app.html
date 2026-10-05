@@ -1,0 +1,39 @@
+<div class="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
+  <!-- Top Navigation Bar & Month Selector -->
+  <app-header></app-header>
+
+  <!-- Main Dashboard Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+    <!-- 1. KPI Metric Summary Cards -->
+    <section aria-labelledby="kpi-heading">
+      <h2 id="kpi-heading" class="sr-only">Financial Summary KPIs</h2>
+      <app-summary-cards></app-summary-cards>
+    </section>
+
+    <!-- 2. Transaction and Planning Forms -->
+    <section aria-labelledby="forms-heading">
+      <h2 id="forms-heading" class="sr-only">Budget & Transaction Controls</h2>
+      <app-transaction-forms></app-transaction-forms>
+    </section>
+
+    <!-- 3. Graphical Charts (Bar & Doughnut) -->
+    <section aria-labelledby="analytics-heading">
+      <h2 id="analytics-heading" class="sr-only">Financial Analytics & Charts</h2>
+      <app-analytics-charts></app-analytics-charts>
+    </section>
+
+    <!-- 4. Budget Matrix & Expense Ledger Tables -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+      <section aria-labelledby="budget-matrix-heading" class="w-full overflow-hidden">
+        <app-budget-table></app-budget-table>
+      </section>
+
+      <section aria-labelledby="expense-ledger-heading" class="w-full overflow-hidden">
+        <app-expense-log></app-expense-log>
+      </section>
+    </div>
+  </main>
+
+  <!-- Ephemeral Feedback Toasts -->
+  <app-toast></app-toast>
+</div>
