@@ -16,13 +16,7 @@
       <app-transaction-forms></app-transaction-forms>
     </section>
 
-    <!-- 3. Graphical Charts (Bar & Doughnut) -->
-    <section aria-labelledby="analytics-heading">
-      <h2 id="analytics-heading" class="sr-only">Financial Analytics & Charts</h2>
-      <app-analytics-charts></app-analytics-charts>
-    </section>
-
-    <!-- 4. Budget Matrix & Expense Ledger Tables -->
+    <!-- 3. Budget Matrix & Expense Ledger Tables -->
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
       <section aria-labelledby="budget-matrix-heading" class="w-full overflow-hidden">
         <app-budget-table></app-budget-table>
@@ -32,6 +26,12 @@
         <app-expense-log></app-expense-log>
       </section>
     </div>
+
+    <!-- 4. Graphical Charts (Bar & Doughnut) -->
+    <section aria-labelledby="analytics-heading">
+      <h2 id="analytics-heading" class="sr-only">Financial Analytics & Charts</h2>
+      <app-analytics-charts></app-analytics-charts>
+    </section>
   </main>
 
   <!-- Ephemeral Feedback Toasts -->
