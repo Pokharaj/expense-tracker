@@ -18,31 +18,58 @@ body {
 }
 
 /* Normalize date & month pickers across mobile and desktop WebKit/Blink */
-input[type="date"],
-input[type="month"] {
+input[type="date"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
   display: block;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  background-clip: padding-box;
 }
 
-/* Ensure left alignment of formatted date text on iOS Safari / WebKit */
+input[type="month"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  background-clip: padding-box;
+}
+
+/* Ensure left alignment and correct height of formatted date text on iOS Safari / WebKit */
 input[type="date"]::-webkit-date-and-time-value,
 input[type="month"]::-webkit-date-and-time-value {
-  text-align: left;
+  text-align: left !important;
   min-height: 1.4em;
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="month"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   opacity: 0.7;
+  display: block;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator:hover,
 input[type="month"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
+}
+
+/* Prevent iOS Safari auto-zoom on input focus by setting font size to 16px on mobile viewports */
+@media screen and (max-width: 767px) {
+  input[type="date"],
+  input[type="number"],
+  input[type="text"],
+  input[type="month"],
+  select {
+    font-size: 16px !important;
+  }
 }
 
 @keyframes bounce-short {

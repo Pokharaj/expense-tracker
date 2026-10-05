@@ -8,6 +8,34 @@ import { IconComponent } from '../icon/icon.component';
   selector: 'app-transaction-forms',
   standalone: true,
   imports: [CommonModule, FormsModule, IconComponent],
+  styles: [`
+    input[type="date"] {
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
+      display: block !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+    input[type="date"]::-webkit-date-and-time-value {
+      text-align: left !important;
+      min-height: 1.4em !important;
+      display: block !important;
+      width: 100% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      display: block !important;
+      cursor: pointer !important;
+      opacity: 0.7 !important;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator:hover {
+      opacity: 1 !important;
+    }
+  `],
   template: `
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <!-- 1. Income Logging Form -->
@@ -157,39 +185,37 @@ import { IconComponent } from '../icon/icon.component';
           </div>
 
           <form id="expense-form" (ngSubmit)="submitExpense()" class="mt-4 space-y-3.5 w-full min-w-0">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full min-w-0">
-              <div class="w-full min-w-0">
-                <label for="expense-date" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Date</label>
-                <input
-                  id="expense-date"
-                  name="date"
-                  type="date"
-                  [(ngModel)]="expenseData.date"
-                  required
-                  class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark]"
-                />
-              </div>
+            <div class="w-full min-w-0">
+              <label for="expense-date" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Date</label>
+              <input
+                id="expense-date"
+                name="date"
+                type="date"
+                [(ngModel)]="expenseData.date"
+                required
+                class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark]"
+              />
+            </div>
 
-              <div class="w-full min-w-0">
-                <label for="expense-category" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Category</label>
-                <select
-                  id="expense-category"
-                  name="category"
-                  [(ngModel)]="expenseData.category"
-                  required
-                  class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark] cursor-pointer"
-                >
-                  <option class="dark:bg-slate-800 dark:text-slate-100" value="Groceries">Groceries</option>
-                  <option class="dark:bg-slate-800 dark:text-slate-100" value="Utilities">Utilities</option>
-                  <option class="dark:bg-slate-800 dark:text-slate-100" value="Entertainment">Entertainment</option>
-                  <option class="dark:bg-slate-800 dark:text-slate-100" value="Rent">Rent</option>
-                  <option class="dark:bg-slate-800 dark:text-slate-100" value="Transportation">Transportation</option>
-                  <option class="dark:bg-slate-800 dark:text-slate-100" value="Dining">Dining</option>
-                  <option class="dark:bg-slate-800 dark:text-slate-100" value="Healthcare">Healthcare</option>
-                  <option class="dark:bg-slate-800 dark:text-slate-100" value="Shopping">Shopping</option>
-                  <option class="dark:bg-slate-800 dark:text-slate-100" value="Other">Other</option>
-                </select>
-              </div>
+            <div class="w-full min-w-0">
+              <label for="expense-category" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Category</label>
+              <select
+                id="expense-category"
+                name="category"
+                [(ngModel)]="expenseData.category"
+                required
+                class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark] cursor-pointer"
+              >
+                <option class="dark:bg-slate-800 dark:text-slate-100" value="Groceries">Groceries</option>
+                <option class="dark:bg-slate-800 dark:text-slate-100" value="Utilities">Utilities</option>
+                <option class="dark:bg-slate-800 dark:text-slate-100" value="Entertainment">Entertainment</option>
+                <option class="dark:bg-slate-800 dark:text-slate-100" value="Rent">Rent</option>
+                <option class="dark:bg-slate-800 dark:text-slate-100" value="Transportation">Transportation</option>
+                <option class="dark:bg-slate-800 dark:text-slate-100" value="Dining">Dining</option>
+                <option class="dark:bg-slate-800 dark:text-slate-100" value="Healthcare">Healthcare</option>
+                <option class="dark:bg-slate-800 dark:text-slate-100" value="Shopping">Shopping</option>
+                <option class="dark:bg-slate-800 dark:text-slate-100" value="Other">Other</option>
+              </select>
             </div>
 
             <div class="w-full min-w-0">
