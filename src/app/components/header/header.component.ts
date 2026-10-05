@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TrackerService } from '../../services/tracker.service';
 import { ThemeService, ThemeMode } from '../../services/theme.service';
+import { ExcelExportService } from '../../services/excel-export.service';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
@@ -26,7 +27,7 @@ import { IconComponent } from '../icon/icon.component';
           </div>
         </div>
 
-        <!-- Controls: Month Selector & Theme Switcher -->
+        <!-- Controls: Month Selector, Excel Export & Theme Switcher -->
         <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
           <!-- Month Selector -->
           <div class="flex items-center bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg px-2 sm:px-2.5 py-1 sm:py-1.5 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-colors">
@@ -42,6 +43,22 @@ import { IconComponent } from '../icon/icon.component';
               class="bg-transparent border-none text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 dark:[color-scheme:dark] focus:outline-none cursor-pointer"
             />
           </div>
+
+          <!-- Export to Excel Button -->
+          <button
+            id="export-excel-btn"
+            type="button"
+            (click)="onExportExcel()"
+            [disabled]="isExporting()"
+            class="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-xs transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            title="Export full financial workbook to Excel (.xlsx)"
+            aria-label="Export to Excel"
+          >
+            <span class="flex items-center text-white" [class.animate-spin]="isExporting()">
+              <app-icon [name]="isExporting() ? 'refresh' : 'file-spreadsheet'"></app-icon>
+            </span>
+            <span class="hidden md:inline">{{ isExporting() ? 'Exporting...' : 'Export Excel' }}</span>
+          </button>
 
           <!-- Theme Switcher 3-Way Segmented Control -->
           <div
@@ -99,11 +116,26 @@ import { IconComponent } from '../icon/icon.component';
 export class HeaderComponent {
   readonly tracker = inject(TrackerService);
   readonly themeService = inject(ThemeService);
+  readonly excelService = inject(ExcelExportService);
+
+  readonly isExporting = signal(false);
 
   onMonthChange(event: Event): void {
     const target = event.target as HTMLInputElement;
     if (target && target.value) {
       this.tracker.setSelectedMonth(target.value);
+    }
+  }
+
+  async onExportExcel(): Promise<void> {
+    if (this.isExporting()) return;
+    this.isExporting.set(true);
+    try {
+      await this.excelService.exportFinancialReport();
+    } catch (err) {
+      console.error('Export failed:', err);
+    } finally {
+      this.isExporting.set(false);
     }
   }
 }
