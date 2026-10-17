@@ -99,7 +99,7 @@ export class ExcelExportService {
         mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
 
-      const filename = `Budget_${formattedMonth.replace(/\s+/g, '_')}.xlsx`;
+      const filename = this.generateExportFilename(selectedMonth);
       this.downloadBlob(saveAs, blob, filename);
 
       this.tracker.showToast(`Budget for ${formattedMonth} exported successfully!`, 'success');
@@ -108,6 +108,41 @@ export class ExcelExportService {
       this.tracker.showToast('Failed to export Excel workbook. Please try again.', 'error');
       throw error;
     }
+  }
+
+  /**
+   * Formats the export date & time into DD-MMM-YY-hh:mm A (e.g. 17-Oct-26-03:24 PM).
+   */
+  public formatExportTimestamp(exportDate: Date = new Date()): string {
+    const day = String(exportDate.getDate()).padStart(2, '0');
+    const shortMonth = exportDate.toLocaleDateString('en-US', { month: 'short' });
+    const shortYear = String(exportDate.getFullYear()).slice(-2);
+
+    let hours = exportDate.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const formattedHours = String(hours).padStart(2, '0');
+    const minutes = String(exportDate.getMinutes()).padStart(2, '0');
+
+    return `${day}-${shortMonth}-${shortYear}-${formattedHours}:${minutes} ${ampm}`;
+  }
+
+  /**
+   * Generates the export filename in the format:
+   * Budget <Month Year> - <DD-MMM-YY-hh:mm A>.xlsx
+   * Example: Budget October 2026 - 17-Oct-26-03:24 PM.xlsx
+   */
+  public generateExportFilename(selectedMonth: string, exportDate: Date = new Date()): string {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const monthDate = new Date(year, (month || 1) - 1, 1);
+    const formattedMonth = monthDate.toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const timestamp = this.formatExportTimestamp(exportDate);
+    return `Budget ${formattedMonth} - ${timestamp}.xlsx`;
   }
 
   /**

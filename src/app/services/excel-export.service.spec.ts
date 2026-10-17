@@ -36,6 +36,18 @@ describe('ExcelExportService', () => {
 
     expect(downloadSpy).toHaveBeenCalled();
     const args = downloadSpy.calls.mostRecent().args;
-    expect(args[2]).toContain('Budget_October_2026.xlsx');
+    expect(args[2]).toMatch(/^Budget October 2026 - \d{2}-[A-Za-z]{3}-\d{2}-\d{2}:\d{2} (AM|PM)\.xlsx$/);
+  });
+
+  it('should format filename with dynamic budget month and export date/time', () => {
+    // 2026-10-17 15:24:00 (3:24 PM)
+    const fixedExportDate = new Date(2026, 9, 17, 15, 24, 0);
+    const filename = service.generateExportFilename('2026-10', fixedExportDate);
+    expect(filename).toBe('Budget October 2026 - 17-Oct-26-03:24 PM.xlsx');
+
+    // Test morning AM time and single-digit day
+    const morningDate = new Date(2026, 0, 5, 9, 7, 0); // Jan 05 2026 09:07 AM
+    const janFilename = service.generateExportFilename('2026-01', morningDate);
+    expect(janFilename).toBe('Budget January 2026 - 05-Jan-26-09:07 AM.xlsx');
   });
 });
