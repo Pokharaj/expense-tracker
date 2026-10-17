@@ -29,7 +29,8 @@
             ],
             "allowedCommonJsDependencies": [
               "exceljs",
-              "file-saver"
+              "file-saver",
+              "jszip"
             ]
           },
           "configurations": {
