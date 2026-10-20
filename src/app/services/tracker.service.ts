@@ -302,6 +302,104 @@ export class TrackerService {
     );
   }
 
+  public updateExpense(id: string, updates: { date?: string; category?: string; amount?: number | string; note?: string }): boolean {
+    const existingIndex = this.expenses().findIndex(e => e.id === id);
+    if (existingIndex < 0) {
+      this.showToast('Expense transaction not found', 'error');
+      return false;
+    }
+
+    const current = this.expenses()[existingIndex];
+    let newAmount = current.amount;
+    if (updates.amount !== undefined) {
+      const parsed = this.parseAmount(updates.amount);
+      if (parsed <= 0) {
+        this.showToast('Expense amount must be greater than zero', 'error');
+        return false;
+      }
+      newAmount = parsed;
+    }
+
+    const newDate = updates.date ? String(updates.date).trim() : current.date;
+    const targetMonth = this.extractMonth(newDate, current.month);
+    const newCategory = updates.category ? updates.category.trim() : current.category;
+    const newNote = updates.note !== undefined ? updates.note.trim() : current.note;
+
+    const updatedExpense: Expense = {
+      ...current,
+      date: newDate,
+      month: targetMonth,
+      category: newCategory,
+      amount: newAmount,
+      note: newNote
+    };
+
+    this.expenses.update(list => {
+      const copy = [...list];
+      copy[existingIndex] = updatedExpense;
+      return copy;
+    });
+
+    if (this.selectedMonth() !== targetMonth) {
+      this.selectedMonth.set(targetMonth);
+    }
+
+    this.showToast(
+      `Expense updated: ₹${newAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      'success'
+    );
+    return true;
+  }
+
+  public updateIncome(id: string, updates: { date?: string; source?: string; amount?: number | string; note?: string }): boolean {
+    const existingIndex = this.incomes().findIndex(i => i.id === id);
+    if (existingIndex < 0) {
+      this.showToast('Income transaction not found', 'error');
+      return false;
+    }
+
+    const current = this.incomes()[existingIndex];
+    let newAmount = current.amount;
+    if (updates.amount !== undefined) {
+      const parsed = this.parseAmount(updates.amount);
+      if (parsed <= 0) {
+        this.showToast('Income amount must be greater than zero', 'error');
+        return false;
+      }
+      newAmount = parsed;
+    }
+
+    const newDate = updates.date ? String(updates.date).trim() : current.date;
+    const targetMonth = this.extractMonth(newDate, current.month);
+    const newSource = updates.source ? updates.source.trim() : current.source;
+    const newNote = updates.note !== undefined ? updates.note.trim() : current.note;
+
+    const updatedIncome: Income = {
+      ...current,
+      date: newDate,
+      month: targetMonth,
+      source: newSource,
+      amount: newAmount,
+      note: newNote
+    };
+
+    this.incomes.update(list => {
+      const copy = [...list];
+      copy[existingIndex] = updatedIncome;
+      return copy;
+    });
+
+    if (this.selectedMonth() !== targetMonth) {
+      this.selectedMonth.set(targetMonth);
+    }
+
+    this.showToast(
+      `Income updated: ₹${newAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      'success'
+    );
+    return true;
+  }
+
   public deleteExpense(id: string): void {
     const item = this.expenses().find(e => e.id === id);
     this.expenses.update(list => list.filter(e => e.id !== id));

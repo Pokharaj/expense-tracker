@@ -55,6 +55,78 @@ describe('TrackerService', () => {
     expect(incomes[0].note).toBeFalsy();
   });
 
+  it('should update expense entry across all fields', () => {
+    service.setSelectedMonth('2026-10');
+    service.addExpense({
+      date: '2026-10-05',
+      category: 'Groceries',
+      amount: 2000,
+      note: 'Weekly essentials'
+    });
+
+    const added = service.currentMonthExpenses()[0];
+    expect(added).toBeDefined();
+
+    const success = service.updateExpense(added.id, {
+      date: '2026-10-12',
+      category: 'Dining',
+      amount: 3200,
+      note: 'Team dinner'
+    });
+
+    expect(success).toBeTrue();
+    const updated = service.currentMonthExpenses()[0];
+    expect(updated.date).toBe('2026-10-12');
+    expect(updated.category).toBe('Dining');
+    expect(updated.amount).toBe(3200);
+    expect(updated.note).toBe('Team dinner');
+    expect(service.actualOutflow()).toBe(3200);
+  });
+
+  it('should update income entry across all fields', () => {
+    service.setSelectedMonth('2026-10');
+    service.addIncome({
+      date: '2026-10-01',
+      source: 'Paycheck',
+      amount: 50000,
+      note: 'Regular salary'
+    });
+
+    const added = service.currentMonthIncomes()[0];
+    expect(added).toBeDefined();
+
+    const success = service.updateIncome(added.id, {
+      date: '2026-10-03',
+      source: 'Freelance',
+      amount: 65000,
+      note: 'Consulting retainer'
+    });
+
+    expect(success).toBeTrue();
+    const updated = service.currentMonthIncomes()[0];
+    expect(updated.date).toBe('2026-10-03');
+    expect(updated.source).toBe('Freelance');
+    expect(updated.amount).toBe(65000);
+    expect(updated.note).toBe('Consulting retainer');
+    expect(service.totalInflow()).toBe(65000);
+  });
+
+  it('should reject invalid amounts when updating', () => {
+    service.setSelectedMonth('2026-10');
+    service.addExpense({
+      date: '2026-10-05',
+      category: 'Groceries',
+      amount: 1000
+    });
+
+    const exp = service.currentMonthExpenses()[0];
+    const failed = service.updateExpense(exp.id, {
+      amount: 0
+    });
+    expect(failed).toBeFalse();
+    expect(service.currentMonthExpenses()[0].amount).toBe(1000);
+  });
+
   it('should delete income entry correctly', () => {
     service.setSelectedMonth('2026-10');
     service.addIncome({
