@@ -41,7 +41,7 @@ import { IconComponent } from '../icon/icon.component';
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <!-- 1. Income Logging Form -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between transition-colors min-w-0 overflow-hidden">
-        <div>
+        <div class="flex flex-col h-full">
           <div class="flex items-center space-x-2.5 pb-4 border-b border-slate-100 dark:border-slate-800">
             <span class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 dark:border dark:border-blue-800/40 flex items-center justify-center">
               <app-icon name="plus"></app-icon>
@@ -52,47 +52,61 @@ import { IconComponent } from '../icon/icon.component';
             </div>
           </div>
 
-          <form id="income-form" (ngSubmit)="submitIncome()" class="mt-4 space-y-3.5 w-full min-w-0">
-            <div class="w-full min-w-0">
-              <label for="income-date" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Date</label>
-              <input
-                id="income-date"
-                name="date"
-                type="date"
-                [(ngModel)]="incomeData.date"
-                required
-                class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark]"
-              />
-            </div>
+          <form id="income-form" (ngSubmit)="submitIncome()" class="mt-4 flex flex-col flex-1 justify-between space-y-3.5 w-full min-w-0">
+            <div class="space-y-3.5">
+              <div class="w-full min-w-0">
+                <label for="income-date" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Date</label>
+                <input
+                  id="income-date"
+                  name="date"
+                  type="date"
+                  [(ngModel)]="incomeData.date"
+                  required
+                  class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark]"
+                />
+              </div>
 
-            <div class="w-full min-w-0">
-              <label for="income-source" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Source</label>
-              <select
-                id="income-source"
-                name="source"
-                [(ngModel)]="incomeData.source"
-                required
-                class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark] cursor-pointer"
-              >
-                @for (src of incomeSources; track src) {
-                  <option class="dark:bg-slate-800 dark:text-slate-100" [value]="src">{{ src }}</option>
-                }
-              </select>
-            </div>
+              <div class="w-full min-w-0">
+                <label for="income-source" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Source</label>
+                <select
+                  id="income-source"
+                  name="source"
+                  [(ngModel)]="incomeData.source"
+                  required
+                  class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark] cursor-pointer"
+                >
+                  @for (src of incomeSources; track src) {
+                    <option class="dark:bg-slate-800 dark:text-slate-100" [value]="src">{{ src }}</option>
+                  }
+                </select>
+              </div>
 
-            <div class="w-full min-w-0">
-              <label for="income-amount" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Amount (₹)</label>
-              <input
-                id="income-amount"
-                name="amount"
-                type="number"
-                min="0.01"
-                step="any"
-                placeholder="e.g. 75000"
-                [(ngModel)]="incomeData.amount"
-                required
-                class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 dark:[color-scheme:dark]"
-              />
+              <div class="w-full min-w-0">
+                <label for="income-amount" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Amount (₹)</label>
+                <input
+                  id="income-amount"
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="any"
+                  placeholder="e.g. 75000"
+                  [(ngModel)]="incomeData.amount"
+                  required
+                  class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 dark:[color-scheme:dark]"
+                />
+              </div>
+
+              <div class="w-full min-w-0">
+                <label for="income-note" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Note / Description</label>
+                <input
+                  id="income-note"
+                  name="note"
+                  type="text"
+                  placeholder="e.g. October Salary, Freelance project"
+                  [(ngModel)]="incomeData.note"
+                  class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 dark:[color-scheme:dark]"
+                />
+              </div>
             </div>
 
             <button
@@ -108,7 +122,7 @@ import { IconComponent } from '../icon/icon.component';
 
       <!-- 2. Budget Planner Form -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between transition-colors min-w-0 overflow-hidden">
-        <div>
+        <div class="flex flex-col h-full">
           <div class="flex items-center space-x-2.5 pb-4 border-b border-slate-100 dark:border-slate-800">
             <span class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 dark:border dark:border-purple-800/40 flex items-center justify-center">
               <app-icon name="pie-chart"></app-icon>
@@ -119,53 +133,53 @@ import { IconComponent } from '../icon/icon.component';
             </div>
           </div>
 
-          <form id="budget-form" (ngSubmit)="submitBudget()" class="mt-4 space-y-3.5 w-full min-w-0">
-            <div class="w-full min-w-0">
-              <label for="budget-category" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Category</label>
-              <select
-                id="budget-category"
-                name="category"
-                [(ngModel)]="budgetData.category"
-                required
-                class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 dark:focus:border-purple-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark] cursor-pointer"
-              >
-                @for (cat of categories; track cat) {
-                  <option class="dark:bg-slate-800 dark:text-slate-100" [value]="cat">{{ cat }}</option>
-                }
-              </select>
+          <form id="budget-form" (ngSubmit)="submitBudget()" class="mt-4 flex flex-col flex-1 justify-between space-y-3.5 w-full min-w-0">
+            <div class="space-y-3.5">
+              <div class="w-full min-w-0">
+                <label for="budget-category" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Category</label>
+                <select
+                  id="budget-category"
+                  name="category"
+                  [(ngModel)]="budgetData.category"
+                  required
+                  class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 dark:focus:border-purple-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark] cursor-pointer"
+                >
+                  @for (cat of categories; track cat) {
+                    <option class="dark:bg-slate-800 dark:text-slate-100" [value]="cat">{{ cat }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="w-full min-w-0">
+                <label for="budget-amount" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Planned Amount (₹)</label>
+                <input
+                  id="budget-amount"
+                  name="plannedAmount"
+                  type="number"
+                  min="0.01"
+                  step="any"
+                  placeholder="e.g. 12000"
+                  [(ngModel)]="budgetData.plannedAmount"
+                  required
+                  class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 dark:focus:border-purple-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 dark:[color-scheme:dark]"
+                />
+              </div>
             </div>
 
-            <div class="w-full min-w-0">
-              <label for="budget-amount" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Planned Amount (₹)</label>
-              <input
-                id="budget-amount"
-                name="plannedAmount"
-                type="number"
-                min="0.01"
-                step="any"
-                placeholder="e.g. 12000"
-                [(ngModel)]="budgetData.plannedAmount"
-                required
-                class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 dark:focus:border-purple-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 dark:[color-scheme:dark]"
-              />
-            </div>
-
-            <div class="pt-6">
-              <button
-                id="budget-submit-btn"
-                type="submit"
-                class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
-              >
-                Set Budget
-              </button>
-            </div>
+            <button
+              id="budget-submit-btn"
+              type="submit"
+              class="w-full mt-2 inline-flex items-center justify-center px-4 py-2.5 bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+            >
+              Set Budget
+            </button>
           </form>
         </div>
       </div>
 
       <!-- 3. Daily Expense Logging Form -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between transition-colors min-w-0 overflow-hidden">
-        <div>
+        <div class="flex flex-col h-full">
           <div class="flex items-center space-x-2.5 pb-4 border-b border-slate-100 dark:border-slate-800">
             <span class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 dark:border dark:border-amber-800/40 flex items-center justify-center">
               <app-icon name="trending-down"></app-icon>
@@ -176,59 +190,61 @@ import { IconComponent } from '../icon/icon.component';
             </div>
           </div>
 
-          <form id="expense-form" (ngSubmit)="submitExpense()" class="mt-4 space-y-3.5 w-full min-w-0">
-            <div class="w-full min-w-0">
-              <label for="expense-date" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Date</label>
-              <input
-                id="expense-date"
-                name="date"
-                type="date"
-                [(ngModel)]="expenseData.date"
-                required
-                class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark]"
-              />
-            </div>
+          <form id="expense-form" (ngSubmit)="submitExpense()" class="mt-4 flex flex-col flex-1 justify-between space-y-3.5 w-full min-w-0">
+            <div class="space-y-3.5">
+              <div class="w-full min-w-0">
+                <label for="expense-date" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Date</label>
+                <input
+                  id="expense-date"
+                  name="date"
+                  type="date"
+                  [(ngModel)]="expenseData.date"
+                  required
+                  class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark]"
+                />
+              </div>
 
-            <div class="w-full min-w-0">
-              <label for="expense-category" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Category</label>
-              <select
-                id="expense-category"
-                name="category"
-                [(ngModel)]="expenseData.category"
-                required
-                class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark] cursor-pointer"
-              >
-                @for (cat of categories; track cat) {
-                  <option class="dark:bg-slate-800 dark:text-slate-100" [value]="cat">{{ cat }}</option>
-                }
-              </select>
-            </div>
+              <div class="w-full min-w-0">
+                <label for="expense-category" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Category</label>
+                <select
+                  id="expense-category"
+                  name="category"
+                  [(ngModel)]="expenseData.category"
+                  required
+                  class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 dark:[color-scheme:dark] cursor-pointer"
+                >
+                  @for (cat of categories; track cat) {
+                    <option class="dark:bg-slate-800 dark:text-slate-100" [value]="cat">{{ cat }}</option>
+                  }
+                </select>
+              </div>
 
-            <div class="w-full min-w-0">
-              <label for="expense-amount" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Amount (₹)</label>
-              <input
-                id="expense-amount"
-                name="amount"
-                type="number"
-                min="0.01"
-                step="any"
-                placeholder="e.g. 4500"
-                [(ngModel)]="expenseData.amount"
-                required
-                class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 dark:[color-scheme:dark]"
-              />
-            </div>
+              <div class="w-full min-w-0">
+                <label for="expense-amount" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Amount (₹)</label>
+                <input
+                  id="expense-amount"
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="any"
+                  placeholder="e.g. 4500"
+                  [(ngModel)]="expenseData.amount"
+                  required
+                  class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 dark:[color-scheme:dark]"
+                />
+              </div>
 
-            <div class="w-full min-w-0">
-              <label for="expense-note" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Note / Description</label>
-              <input
-                id="expense-note"
-                name="note"
-                type="text"
-                placeholder="e.g. Supermarket trip"
-                [(ngModel)]="expenseData.note"
-                class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 dark:[color-scheme:dark]"
-              />
+              <div class="w-full min-w-0">
+                <label for="expense-note" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Note / Description</label>
+                <input
+                  id="expense-note"
+                  name="note"
+                  type="text"
+                  placeholder="e.g. Supermarket trip"
+                  [(ngModel)]="expenseData.note"
+                  class="block w-full min-w-0 max-w-full box-border text-sm px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 dark:focus:border-amber-400 bg-slate-50/50 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 dark:[color-scheme:dark]"
+                />
+              </div>
             </div>
 
             <button

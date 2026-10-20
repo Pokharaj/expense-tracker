@@ -134,7 +134,7 @@ import { IconComponent } from '../icon/icon.component';
                   <th scope="col" class="py-3 px-4 sm:px-6">Date</th>
                   <th scope="col" class="py-3 px-4 sm:px-6">Amount</th>
                   <th scope="col" class="py-3 px-4 sm:px-6">Source</th>
-                  <th scope="col" class="py-3 px-4 sm:px-6">Note</th>
+                  <th scope="col" class="py-3 px-4 sm:px-6">Note / Description</th>
                   <th scope="col" class="py-3 px-4 sm:px-6 text-right">Actions</th>
                 </tr>
               </thead>
@@ -144,26 +144,27 @@ import { IconComponent } from '../icon/icon.component';
                     class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors income-row"
                     [attr.data-id]="item.id"
                     [attr.data-source]="item.source"
+                    [attr.data-note]="item.note"
                   >
-                    <td class="py-3.5 px-4 sm:px-6 text-slate-600 dark:text-slate-400 font-mono text-xs">
+                    <td class="py-3.5 px-4 sm:px-6 text-slate-600 dark:text-slate-400 font-mono text-xs income-date-cell">
                       {{ item.date }}
                     </td>
-                    <td class="py-3.5 px-4 sm:px-6 font-bold text-emerald-600 dark:text-emerald-400">
+                    <td class="py-3.5 px-4 sm:px-6 font-bold text-emerald-600 dark:text-emerald-400 income-amount-cell">
                       {{ item.amount | inrCurrency }}
                     </td>
-                    <td class="py-3.5 px-4 sm:px-6 font-semibold text-slate-800 dark:text-slate-200">
+                    <td class="py-3.5 px-4 sm:px-6 font-semibold text-slate-800 dark:text-slate-200 income-source-cell">
                       <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 dark:border dark:border-blue-800/40">
                         {{ item.source }}
                       </span>
                     </td>
-                    <td class="py-3.5 px-4 sm:px-6 text-slate-700 dark:text-slate-300">
+                    <td class="py-3.5 px-4 sm:px-6 text-slate-700 dark:text-slate-300 income-note-cell">
                       {{ item.note || '-' }}
                     </td>
                     <td class="py-3.5 px-4 sm:px-6 text-right">
                       <button
                         type="button"
                         (click)="tracker.deleteIncome(item.id)"
-                        [attr.aria-label]="'Delete ' + item.source"
+                        [attr.aria-label]="'Delete ' + (item.note || item.source)"
                         class="delete-income-btn inline-flex items-center space-x-1 px-2.5 py-1 text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors border border-rose-200/60 dark:border-rose-900/40 cursor-pointer"
                       >
                         <app-icon name="trash"></app-icon>
