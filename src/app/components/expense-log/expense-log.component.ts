@@ -46,7 +46,7 @@ import { EXPENSE_CATEGORIES, INCOME_SOURCES, Expense, Income } from '../../model
             {{ activeTab === 'expenses' ? 'Expense Ledger' : 'Income Ledger' }}
           </h2>
           <p class="text-xs text-slate-400 dark:text-slate-500">
-            {{ filters.month === 'all' ? 'All historical transactions' : (filters.month !== 'current' ? 'Transactions for ' + filters.month : 'Detailed transactions for ' + tracker.selectedMonth()) }}
+            Detailed transactions for {{ tracker.selectedMonth() }}
           </p>
         </div>
 
@@ -149,7 +149,7 @@ import { EXPENSE_CATEGORIES, INCOME_SOURCES, Expense, Income } from '../../model
             id="expense-filter-panel"
             class="px-3 pb-4 sm:px-6 pt-1 border-t border-slate-100 dark:border-slate-800/80 transition-all"
           >
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
               <!-- 1. Category / Source Filter -->
               <div>
                 <label [for]="activeTab === 'expenses' ? 'filter-category' : 'filter-source'" class="block font-semibold text-slate-600 dark:text-slate-300 mb-1">
@@ -180,37 +180,12 @@ import { EXPENSE_CATEGORIES, INCOME_SOURCES, Expense, Income } from '../../model
                 }
               </div>
 
-              <!-- 2. Date Range: From & To -->
-              <div>
-                <label class="block font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                  Date Range
-                </label>
-                <div class="grid grid-cols-2 gap-1.5">
-                  <input
-                    id="filter-date-from"
-                    type="date"
-                    [(ngModel)]="filters.dateFrom"
-                    placeholder="From"
-                    class="w-full text-xs px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 dark:[color-scheme:dark]"
-                    title="From Date"
-                  />
-                  <input
-                    id="filter-date-to"
-                    type="date"
-                    [(ngModel)]="filters.dateTo"
-                    placeholder="To"
-                    class="w-full text-xs px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 dark:[color-scheme:dark]"
-                    title="To Date"
-                  />
-                </div>
-              </div>
-
-              <!-- 3. Amount Range: Min & Max -->
+              <!-- 2. Amount Range: Min & Max -->
               <div>
                 <label class="block font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Amount Range (₹)
                 </label>
-                <div class="grid grid-cols-2 gap-1.5">
+                <div class="grid grid-cols-2 gap-2">
                   <input
                     id="filter-min-amount"
                     type="number"
@@ -218,7 +193,7 @@ import { EXPENSE_CATEGORIES, INCOME_SOURCES, Expense, Income } from '../../model
                     step="any"
                     [(ngModel)]="filters.minAmount"
                     placeholder="Min ₹"
-                    class="w-full text-xs px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    class="w-full text-xs sm:text-sm px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                   <input
                     id="filter-max-amount"
@@ -227,8 +202,37 @@ import { EXPENSE_CATEGORIES, INCOME_SOURCES, Expense, Income } from '../../model
                     step="any"
                     [(ngModel)]="filters.maxAmount"
                     placeholder="Max ₹"
-                    class="w-full text-xs px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    class="w-full text-xs sm:text-sm px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
+                </div>
+              </div>
+
+              <!-- 3. Date Range: From & To (Spans full width of filter card with generous spacing) -->
+              <div class="sm:col-span-2">
+                <label class="block font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                  Date Range
+                </label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-xs font-medium text-slate-500 dark:text-slate-400 w-10 shrink-0">From:</span>
+                    <input
+                      id="filter-date-from"
+                      type="date"
+                      [(ngModel)]="filters.dateFrom"
+                      class="flex-1 min-w-0 text-xs sm:text-sm px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 dark:[color-scheme:dark]"
+                      title="From Date"
+                    />
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-xs font-medium text-slate-500 dark:text-slate-400 w-10 shrink-0">To:</span>
+                    <input
+                      id="filter-date-to"
+                      type="date"
+                      [(ngModel)]="filters.dateTo"
+                      class="flex-1 min-w-0 text-xs sm:text-sm px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 dark:[color-scheme:dark]"
+                      title="To Date"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -691,9 +695,7 @@ export class ExpenseLogComponent {
     category: '',
     source: '',
     minAmount: null as number | string | null,
-    maxAmount: null as number | string | null,
-    note: '',
-    month: 'current'
+    maxAmount: null as number | string | null
   };
 
   // Edit modal state
@@ -743,25 +745,7 @@ export class ExpenseLogComponent {
     return Array.from(srcs);
   }
 
-  get availableMonths(): string[] {
-    const months = new Set<string>();
-    months.add(this.tracker.selectedMonth());
-    for (const e of this.tracker.expenses()) {
-      if (e.month) months.add(e.month);
-    }
-    for (const i of this.tracker.incomes()) {
-      if (i.month) months.add(i.month);
-    }
-    return Array.from(months).sort().reverse();
-  }
-
   get baseExpenses(): Expense[] {
-    if (this.filters.month === 'all') {
-      return this.tracker.expenses();
-    }
-    if (this.filters.month && this.filters.month !== 'current') {
-      return this.tracker.expenses().filter(e => e.month === this.filters.month);
-    }
     return this.tracker.currentMonthExpenses();
   }
 
@@ -798,14 +782,7 @@ export class ExpenseLogComponent {
           return false;
         }
       }
-      // 6. Note / Description
-      if (this.filters.note && this.filters.note.trim()) {
-        const noteFilter = this.filters.note.toLowerCase().trim();
-        if (!item.note || !item.note.toLowerCase().includes(noteFilter)) {
-          return false;
-        }
-      }
-      // 7. Global Search Query
+      // 6. Global Search Query (across note, category, date, and amount)
       if (this.searchQuery && this.searchQuery.trim()) {
         const q = this.searchQuery.toLowerCase().trim();
         const matchesCategory = (item.category || '').toLowerCase().includes(q);
@@ -825,12 +802,6 @@ export class ExpenseLogComponent {
   }
 
   get baseIncomes(): Income[] {
-    if (this.filters.month === 'all') {
-      return this.tracker.incomes();
-    }
-    if (this.filters.month && this.filters.month !== 'current') {
-      return this.tracker.incomes().filter(i => i.month === this.filters.month);
-    }
     return this.tracker.currentMonthIncomes();
   }
 
@@ -867,14 +838,7 @@ export class ExpenseLogComponent {
           return false;
         }
       }
-      // 6. Note / Description
-      if (this.filters.note && this.filters.note.trim()) {
-        const noteFilter = this.filters.note.toLowerCase().trim();
-        if (!item.note || !item.note.toLowerCase().includes(noteFilter)) {
-          return false;
-        }
-      }
-      // 7. Global Search Query
+      // 6. Global Search Query
       if (this.searchQuery && this.searchQuery.trim()) {
         const q = this.searchQuery.toLowerCase().trim();
         const matchesSource = (item.source || '').toLowerCase().includes(q);
@@ -905,8 +869,6 @@ export class ExpenseLogComponent {
     }
     if (this.filters.minAmount !== null && this.filters.minAmount !== '' && this.filters.minAmount !== undefined) count++;
     if (this.filters.maxAmount !== null && this.filters.maxAmount !== '' && this.filters.maxAmount !== undefined) count++;
-    if (this.filters.note && this.filters.note.trim()) count++;
-    if (this.filters.month && this.filters.month !== 'current') count++;
     return count;
   }
 
@@ -922,9 +884,7 @@ export class ExpenseLogComponent {
       category: '',
       source: '',
       minAmount: null,
-      maxAmount: null,
-      note: '',
-      month: 'current'
+      maxAmount: null
     };
   }
 

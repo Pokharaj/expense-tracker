@@ -244,8 +244,8 @@ describe('ExpenseLogComponent', () => {
       expect(amounts).toContain(2400);
     });
 
-    it('should filter expenses by note description', () => {
-      component.filters.note = 'electricity';
+    it('should search expenses by note keyword using quick search', () => {
+      component.searchQuery = 'electricity';
       fixture.detectChanges();
 
       expect(component.filteredExpenses.length).toBe(1);
@@ -273,7 +273,7 @@ describe('ExpenseLogComponent', () => {
     it('should filter expenses across multiple fields simultaneously', () => {
       component.filters.category = 'Dining';
       component.filters.minAmount = 2000;
-      component.filters.note = 'dinner';
+      component.filters.dateFrom = '2026-10-20';
       fixture.detectChanges();
 
       expect(component.filteredExpenses.length).toBe(1);
@@ -298,7 +298,6 @@ describe('ExpenseLogComponent', () => {
       component.filters.maxAmount = 5000;
       component.filters.dateFrom = '2026-10-01';
       component.filters.dateTo = '2026-10-31';
-      component.filters.note = 'party';
       expect(component.hasActiveFilters).toBeTrue();
 
       component.clearFilters();
@@ -307,22 +306,6 @@ describe('ExpenseLogComponent', () => {
       expect(component.hasActiveFilters).toBeFalse();
       expect(component.activeFilterCount).toBe(0);
       expect(component.filteredExpenses.length).toBe(4);
-    });
-
-    it('should support filtering expenses across all months with month scope', () => {
-      tracker.addExpense({
-        date: '2026-09-15',
-        category: 'Healthcare',
-        amount: 800,
-        note: 'Dental checkup'
-      });
-
-      component.filters.month = 'all';
-      fixture.detectChanges();
-
-      expect(component.filteredExpenses.length).toBe(5);
-      const categories = component.filteredExpenses.map(e => e.category);
-      expect(categories).toContain('Healthcare');
     });
 
     it('should toggle filter panel visibility when toggle button is clicked', () => {
