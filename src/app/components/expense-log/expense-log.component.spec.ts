@@ -152,4 +152,193 @@ describe('ExpenseLogComponent', () => {
     expect(component.editingType).toBeNull();
     expect(tracker.currentMonthExpenses()[0].amount).toBe(25000);
   });
+
+  describe('Expense Filtering', () => {
+    beforeEach(() => {
+      tracker.setSelectedMonth('2026-10');
+      tracker.addExpense({
+        date: '2026-10-02',
+        category: 'Groceries',
+        amount: 3500,
+        note: 'Supermarket weekly buy'
+      });
+      tracker.addExpense({
+        date: '2026-10-08',
+        category: 'Dining',
+        amount: 1200,
+        note: 'Coffee and brunch'
+      });
+      tracker.addExpense({
+        date: '2026-10-15',
+        category: 'Utilities',
+        amount: 2400,
+        note: 'Electricity bill'
+      });
+      tracker.addExpense({
+        date: '2026-10-22',
+        category: 'Dining',
+        amount: 4500,
+        note: 'Team dinner party'
+      });
+
+      component.activeTab = 'expenses';
+      fixture.detectChanges();
+    });
+
+    it('should display all current month expenses initially', () => {
+      expect(component.filteredExpenses.length).toBe(4);
+      expect(component.totalExpenseCount).toBe(4);
+      expect(component.hasActiveFilters).toBeFalse();
+
+      const rows = fixture.nativeElement.querySelectorAll('.expense-row');
+      expect(rows.length).toBe(4);
+    });
+
+    it('should filter expenses by category', () => {
+      component.filters.category = 'Dining';
+      fixture.detectChanges();
+
+      expect(component.filteredExpenses.length).toBe(2);
+      expect(component.filteredExpenses.every(e => e.category === 'Dining')).toBeTrue();
+
+      const rows = fixture.nativeElement.querySelectorAll('.expense-row');
+      expect(rows.length).toBe(2);
+    });
+
+    it('should filter expenses by date range (from and to)', () => {
+      component.filters.dateFrom = '2026-10-05';
+      component.filters.dateTo = '2026-10-20';
+      fixture.detectChanges();
+
+      expect(component.filteredExpenses.length).toBe(2);
+      const dates = component.filteredExpenses.map(e => e.date);
+      expect(dates).toContain('2026-10-08');
+      expect(dates).toContain('2026-10-15');
+    });
+
+    it('should filter expenses by minimum amount', () => {
+      component.filters.minAmount = 3000;
+      fixture.detectChanges();
+
+      expect(component.filteredExpenses.length).toBe(2);
+      expect(component.filteredExpenses.every(e => e.amount >= 3000)).toBeTrue();
+    });
+
+    it('should filter expenses by maximum amount', () => {
+      component.filters.maxAmount = 2000;
+      fixture.detectChanges();
+
+      expect(component.filteredExpenses.length).toBe(1);
+      expect(component.filteredExpenses[0].category).toBe('Dining');
+      expect(component.filteredExpenses[0].amount).toBe(1200);
+    });
+
+    it('should filter expenses by amount range (min and max)', () => {
+      component.filters.minAmount = 2000;
+      component.filters.maxAmount = 4000;
+      fixture.detectChanges();
+
+      expect(component.filteredExpenses.length).toBe(2);
+      const amounts = component.filteredExpenses.map(e => e.amount);
+      expect(amounts).toContain(3500);
+      expect(amounts).toContain(2400);
+    });
+
+    it('should filter expenses by note description', () => {
+      component.filters.note = 'electricity';
+      fixture.detectChanges();
+
+      expect(component.filteredExpenses.length).toBe(1);
+      expect(component.filteredExpenses[0].note).toBe('Electricity bill');
+    });
+
+    it('should filter expenses using quick search across all fields', () => {
+      // Search by category
+      component.searchQuery = 'Utilities';
+      expect(component.filteredExpenses.length).toBe(1);
+
+      // Search by note
+      component.searchQuery = 'brunch';
+      expect(component.filteredExpenses.length).toBe(1);
+
+      // Search by date
+      component.searchQuery = '2026-10-22';
+      expect(component.filteredExpenses.length).toBe(1);
+
+      // Search by amount
+      component.searchQuery = '4500';
+      expect(component.filteredExpenses.length).toBe(1);
+    });
+
+    it('should filter expenses across multiple fields simultaneously', () => {
+      component.filters.category = 'Dining';
+      component.filters.minAmount = 2000;
+      component.filters.note = 'dinner';
+      fixture.detectChanges();
+
+      expect(component.filteredExpenses.length).toBe(1);
+      expect(component.filteredExpenses[0].amount).toBe(4500);
+      expect(component.filteredExpenses[0].note).toBe('Team dinner party');
+    });
+
+    it('should show empty filter results state when no expenses match criteria', () => {
+      component.filters.category = 'Gym/Sports';
+      fixture.detectChanges();
+
+      expect(component.filteredExpenses.length).toBe(0);
+      const emptyFilterEl = fixture.nativeElement.querySelector('#expense-filter-empty');
+      expect(emptyFilterEl).toBeTruthy();
+      expect(emptyFilterEl.textContent).toContain('No expenses match your filters');
+    });
+
+    it('should reset all filters when clearFilters is called', () => {
+      component.searchQuery = 'team';
+      component.filters.category = 'Dining';
+      component.filters.minAmount = 1000;
+      component.filters.maxAmount = 5000;
+      component.filters.dateFrom = '2026-10-01';
+      component.filters.dateTo = '2026-10-31';
+      component.filters.note = 'party';
+      expect(component.hasActiveFilters).toBeTrue();
+
+      component.clearFilters();
+      fixture.detectChanges();
+
+      expect(component.hasActiveFilters).toBeFalse();
+      expect(component.activeFilterCount).toBe(0);
+      expect(component.filteredExpenses.length).toBe(4);
+    });
+
+    it('should support filtering expenses across all months with month scope', () => {
+      tracker.addExpense({
+        date: '2026-09-15',
+        category: 'Healthcare',
+        amount: 800,
+        note: 'Dental checkup'
+      });
+
+      component.filters.month = 'all';
+      fixture.detectChanges();
+
+      expect(component.filteredExpenses.length).toBe(5);
+      const categories = component.filteredExpenses.map(e => e.category);
+      expect(categories).toContain('Healthcare');
+    });
+
+    it('should toggle filter panel visibility when toggle button is clicked', () => {
+      expect(component.isFilterPanelOpen).toBeFalse();
+      const toggleBtn = fixture.nativeElement.querySelector('#toggle-filter-btn') as HTMLButtonElement;
+      expect(toggleBtn).toBeTruthy();
+
+      toggleBtn.click();
+      fixture.detectChanges();
+      expect(component.isFilterPanelOpen).toBeTrue();
+      expect(fixture.nativeElement.querySelector('#expense-filter-panel')).toBeTruthy();
+
+      toggleBtn.click();
+      fixture.detectChanges();
+      expect(component.isFilterPanelOpen).toBeFalse();
+      expect(fixture.nativeElement.querySelector('#expense-filter-panel')).toBeFalsy();
+    });
+  });
 });
