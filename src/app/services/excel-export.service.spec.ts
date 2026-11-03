@@ -87,6 +87,24 @@ describe('ExcelExportService', () => {
     expect(updatedSheet2Xml).toContain('Quarterly achievement');
     expect(updatedSheet2Xml).toContain('Bonus');
     expect(updatedSheet2Xml).toContain('<v>5500</v>');
+
+    // Authentic template styles should be used for dates, amounts, descriptions, and alignments
+    // Expense date (Col B) should have date style 132 (numFmt: d-mmm-yyyy)
+    expect(updatedSheet2Xml).toMatch(/<c r="B6" s="132" t="n"><v>\d+<\/v><\/c>/);
+    // Expense amount (Col D) should have currency style 133 (numFmt: [$₹]#,##0, right-aligned)
+    expect(updatedSheet2Xml).toMatch(/<c r="D6" s="133" t="n"><v>450<\/v><\/c>/);
+    // Expense note (Col E) should have standard Lato style 134 (not right/bottom aligned style 46)
+    expect(updatedSheet2Xml).toMatch(/<c r="E6" s="134"/);
+    // Income date (Col H) should have date style 136 (numFmt: d-mmm-yyyy, not currency style 51)
+    expect(updatedSheet2Xml).toMatch(/<c r="H6" s="136" t="n"><v>\d+<\/v><\/c>/);
+    // Income amount (Col I) should have currency style 137 (not center/top aligned style 52)
+    expect(updatedSheet2Xml).toMatch(/<c r="I6" s="137" t="n"><v>5500<\/v><\/c>/);
+    // Income note (Col J) and category (Col K) should have styles 138 and 139
+    expect(updatedSheet2Xml).toMatch(/<c r="J6" s="138"/);
+    expect(updatedSheet2Xml).toMatch(/<c r="K6" s="139"/);
+
+    // Rows must not have invalid s="164" attribute
+    expect(updatedSheet2Xml).not.toContain('s="164"');
   });
 
   it('should format filename with dynamic budget month and export date/time', () => {

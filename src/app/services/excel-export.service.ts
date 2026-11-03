@@ -315,19 +315,19 @@ export class ExcelExportService {
       }
 
       // Preserve each cell's style ID from the template
-      const sA = sMap['A'] || '142';
-      const sB = sMap['B'] || '171';
-      const sC = sMap['C'] || '172';
-      const sD = sMap['D'] || '140';
-      const sE = sMap['E'] || '158';
-      const sF = sMap['F'] || '146';
-      const sG = sMap['G'] || '149';
-      const sH = sMap['H'] || '171';
-      const sI = sMap['I'] || '172';
-      const sJ = sMap['J'] || '140';
-      const sK = sMap['K'] || '158';
-      const sL = sMap['L'] || '146';
-      const sM = sMap['M'] || '142';
+      const sA = sMap['A'] || '90';
+      const sB = sMap['B'] || '99';
+      const sC = sMap['C'] || '100';
+      const sD = sMap['D'] || '101';
+      const sE = sMap['E'] || '94';
+      const sF = sMap['F'] || '102';
+      const sG = sMap['G'] || '95';
+      const sH = sMap['H'] || '99';
+      const sI = sMap['I'] || '100';
+      const sJ = sMap['J'] || '101';
+      const sK = sMap['K'] || '94';
+      const sL = sMap['L'] || '102';
+      const sM = sMap['M'] || '90';
 
       let cellsXml = `<c r="A${r}" s="${sA}" t="n" />`;
 
@@ -363,7 +363,7 @@ export class ExcelExportService {
 
       cellsXml += `<c r="M${r}" s="${sM}" t="n" />`;
 
-      const newRowXml = `<row r="${r}" ht="18" customHeight="1" s="164">${cellsXml}</row>`;
+      const newRowXml = `<row r="${r}" ht="18" customHeight="1">${cellsXml}</row>`;
       sheet1 = sheet1.replace(originalRowXml, newRowXml);
     }
 
@@ -371,62 +371,62 @@ export class ExcelExportService {
     const netSavings = totalActualIncome - totalActualExpenses;
 
     sheet1 = sheet1.replace(
-      /<c r="D26"[^>]*><f>[^<]*<\/f><v\s*\/?><\/c>/,
-      `<c r="D26" s="125"><f>sum(D27:D44)</f><v>${totalPlannedExpenses}</v></c>`
+      /(<c r="D26"[^>]*><f[^>]*>[^<]*<\/f>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${totalPlannedExpenses}</v>`
     );
     sheet1 = sheet1.replace(
-      /<c r="E26"[^>]*><f>[^<]*<\/f><v\s*\/?><\/c>/,
-      `<c r="E26" s="125"><f>sum(E27:E44)</f><v>${totalActualExpenses}</v></c>`
+      /(<c r="E26"[^>]*><f[^>]*\/>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${totalActualExpenses}</v>`
     );
     sheet1 = sheet1.replace(
-      /<c r="F26"[^>]*><f>[^<]*<\/f><v\s*\/?><\/c>/,
-      `<c r="F26" s="125"><f>sum(F27:F44)</f><v>${totalPlannedExpenses - totalActualExpenses}</v></c>`
+      /(<c r="F26"[^>]*><f[^>]*\/>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${totalPlannedExpenses - totalActualExpenses}</v>`
     );
     sheet1 = sheet1.replace(
-      /<c r="J26"[^>]*><f>[^<]*<\/f><v\s*\/?><\/c>/,
-      `<c r="J26" s="125"><f>sum(J27:J42)</f><v>${totalPlannedIncome}</v></c>`
+      /(<c r="J26"[^>]*><f[^>]*>[^<]*<\/f>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${totalPlannedIncome}</v>`
     );
     sheet1 = sheet1.replace(
-      /<c r="K26"[^>]*><f>[^<]*<\/f><v\s*\/?><\/c>/,
-      `<c r="K26" s="125"><f>sum(K27:K42)</f><v>${totalActualIncome}</v></c>`
+      /(<c r="K26"[^>]*><f[^>]*\/>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${totalActualIncome}</v>`
     );
     sheet1 = sheet1.replace(
-      /<c r="L26"[^>]*><f>[^<]*<\/f><v\s*\/?><\/c>/,
-      `<c r="L26" s="125"><f>sum(L27:L42)</f><v>${totalActualIncome - totalPlannedIncome}</v></c>`
+      /(<c r="L26"[^>]*><f[^>]*\/>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${totalActualIncome - totalPlannedIncome}</v>`
     );
 
     // 4. Update Overview and KPI values
     sheet1 = sheet1.replace(
-      /(<c r="C21"[^>]*><f>D26<\/f>)<v\s*\/?>(<\/c>)/,
-      `$1<v>${totalPlannedExpenses}</v>$2`
+      /(<c r="C21"[^>]*><f>D26<\/f>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${totalPlannedExpenses}</v>`
     );
     sheet1 = sheet1.replace(
-      /(<c r="C22"[^>]*><f>E26<\/f>)<v\s*\/?>(<\/c>)/,
-      `$1<v>${totalActualExpenses}</v>$2`
+      /(<c r="C22"[^>]*><f>E26<\/f>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${totalActualExpenses}</v>`
     );
     sheet1 = sheet1.replace(
-      /(<c r="I21"[^>]*><f>J26<\/f>)<v\s*\/?>(<\/c>)/,
-      `$1<v>${totalPlannedIncome}</v>$2`
+      /(<c r="I21"[^>]*><f>J26<\/f>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${totalPlannedIncome}</v>`
     );
     sheet1 = sheet1.replace(
-      /(<c r="I22"[^>]*><f>K26<\/f>)<v\s*\/?>(<\/c>)/,
-      `$1<v>${totalActualIncome}</v>$2`
+      /(<c r="I22"[^>]*><f>K26<\/f>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${totalActualIncome}</v>`
     );
     sheet1 = sheet1.replace(
-      /(<c r="E17"[^>]*><f>[^<]*<\/f>)<v\s*\/?>(<\/c>)/,
-      `$1<v>${netSavings}</v>$2`
+      /(<c r="E17"[^>]*><f>[^<]*<\/f>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${netSavings}</v>`
     );
     sheet1 = sheet1.replace(
-      /(<c r="I15"[^>]*><f>[^<]*<\/f>)<v\s*\/?>(<\/c>)/,
-      `$1<v>${netSavings}</v>$2`
+      /(<c r="I15"[^>]*><f>[^<]*<\/f>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${netSavings}</v>`
     );
     sheet1 = sheet1.replace(
-      /(<c r="I16"[^>]*><f>[^<]*<\/f>)<v\s*\/?>(<\/c>)/,
-      `$1<v>${netSavings >= 0 ? 'Saved this month' : 'Spent this month'}</v>$2`
+      /(<c r="I16"[^>]*><f>[^<]*<\/f>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${netSavings >= 0 ? 'Saved this month' : 'Spent this month'}</v>`
     );
     sheet1 = sheet1.replace(
-      /(<c r="I14"[^>]*><f>[^<]*<\/f>)<v\s*\/?>(<\/c>)/,
-      `$1<v>${netSavings < 0 ? 'Decrease in total savings' : 'Increase in total savings'}</v>$2`
+      /(<c r="I14"[^>]*><f>[^<]*<\/f>)(?:<v>[^<]*<\/v>|<v\s*\/>)/,
+      `$1<v>${netSavings < 0 ? 'Decrease in total savings' : 'Increase in total savings'}</v>`
     );
 
     return sheet1;
@@ -446,6 +446,23 @@ export class ExcelExportService {
     const expenses = [...rawExpenses].sort((a, b) => a.date.localeCompare(b.date));
     const incomes = [...rawIncomes].sort((a, b) => a.date.localeCompare(b.date));
 
+    // Dynamically extract authentic styles from template row (fallback to template defaults)
+    const baseRowMatch = sheet2.match(/<row r="8"[^>]*>[\s\S]*?<\/row>/) || sheet2.match(/<row r="6"[^>]*>[\s\S]*?<\/row>/);
+    const sMap = baseRowMatch ? this.extractCellStyles(baseRowMatch[0]) : {};
+
+    const sA = sMap['A'] || '65';
+    const sB = sMap['B'] || '132';
+    const sC = sMap['C'] || '132';
+    const sD = sMap['D'] || '133';
+    const sE = sMap['E'] || '134';
+    const sF = sMap['F'] || '140';
+    const sG = sMap['G'] || '65';
+    const sH = sMap['H'] || '136';
+    const sI = sMap['I'] || '137';
+    const sJ = sMap['J'] || '138';
+    const sK = sMap['K'] || '139';
+    const sL = sMap['L'] || '65';
+
     const maxEntries = Math.max(expenses.length, incomes.length);
     const maxRows = Math.max(163, 5 + maxEntries);
     const newSheet2Rows: string[] = [];
@@ -456,40 +473,40 @@ export class ExcelExportService {
       const exp = expIdx < expenses.length ? expenses[expIdx] : null;
       const inc = incIdx < incomes.length ? incomes[incIdx] : null;
 
-      let rowXml = `<row r="${r}" ht="19.5" customHeight="1" s="164">`;
-      rowXml += `<c r="A${r}" s="142" t="n" />`;
+      let rowXml = `<row r="${r}" ht="19.5" customHeight="1">`;
+      rowXml += `<c r="A${r}" s="${sA}" />`;
 
-      // Expenses on left
+      // Expenses on left (Columns B: Date, C: Spacing, D: Amount, E: Description, F: Category)
       if (exp) {
-        rowXml += `<c r="B${r}" s="42" t="n"><v>${this.toExcelDate(exp.date)}</v></c>`;
-        rowXml += `<c r="C${r}" s="42" t="n" />`;
-        rowXml += `<c r="D${r}" s="45" t="n"><v>${Number(exp.amount) || 0}</v></c>`;
-        rowXml += `<c r="E${r}" s="46" t="inlineStr"><is><t>${this.escapeXml(exp.note || '-')}</t></is></c>`;
-        rowXml += `<c r="F${r}" s="55" t="inlineStr"><is><t>${this.escapeXml(exp.category)}</t></is></c>`;
+        rowXml += `<c r="B${r}" s="${sB}" t="n"><v>${this.toExcelDate(exp.date)}</v></c>`;
+        rowXml += `<c r="C${r}" s="${sC}" />`;
+        rowXml += `<c r="D${r}" s="${sD}" t="n"><v>${Number(exp.amount) || 0}</v></c>`;
+        rowXml += `<c r="E${r}" s="${sE}" t="inlineStr"><is><t>${this.escapeXml(exp.note || '-')}</t></is></c>`;
+        rowXml += `<c r="F${r}" s="${sF}" t="inlineStr"><is><t>${this.escapeXml(exp.category)}</t></is></c>`;
       } else {
-        rowXml += `<c r="B${r}" s="42" t="n" />`;
-        rowXml += `<c r="C${r}" s="42" t="n" />`;
-        rowXml += `<c r="D${r}" s="45" t="n" />`;
-        rowXml += `<c r="E${r}" s="46" t="n" />`;
-        rowXml += `<c r="F${r}" s="55" t="n" />`;
+        rowXml += `<c r="B${r}" s="${sB}" />`;
+        rowXml += `<c r="C${r}" s="${sC}" />`;
+        rowXml += `<c r="D${r}" s="${sD}" />`;
+        rowXml += `<c r="E${r}" s="${sE}" />`;
+        rowXml += `<c r="F${r}" s="${sF}" />`;
       }
 
-      rowXml += `<c r="G${r}" s="142" t="n" />`;
+      rowXml += `<c r="G${r}" s="${sG}" />`;
 
-      // Incomes on right
+      // Incomes on right (Columns H: Date, I: Amount, J: Description, K: Category)
       if (inc) {
-        rowXml += `<c r="H${r}" s="51" t="n"><v>${this.toExcelDate(inc.date)}</v></c>`;
-        rowXml += `<c r="I${r}" s="52" t="n"><v>${Number(inc.amount) || 0}</v></c>`;
-        rowXml += `<c r="J${r}" s="58" t="inlineStr"><is><t>${this.escapeXml(inc.note || '-')}</t></is></c>`;
-        rowXml += `<c r="K${r}" s="59" t="inlineStr"><is><t>${this.escapeXml(inc.source)}</t></is></c>`;
+        rowXml += `<c r="H${r}" s="${sH}" t="n"><v>${this.toExcelDate(inc.date)}</v></c>`;
+        rowXml += `<c r="I${r}" s="${sI}" t="n"><v>${Number(inc.amount) || 0}</v></c>`;
+        rowXml += `<c r="J${r}" s="${sJ}" t="inlineStr"><is><t>${this.escapeXml(inc.note || '-')}</t></is></c>`;
+        rowXml += `<c r="K${r}" s="${sK}" t="inlineStr"><is><t>${this.escapeXml(inc.source)}</t></is></c>`;
       } else {
-        rowXml += `<c r="H${r}" s="66" t="n" />`;
-        rowXml += `<c r="I${r}" s="52" t="n" />`;
-        rowXml += `<c r="J${r}" s="58" t="n" />`;
-        rowXml += `<c r="K${r}" s="59" t="n" />`;
+        rowXml += `<c r="H${r}" s="${sH}" />`;
+        rowXml += `<c r="I${r}" s="${sI}" />`;
+        rowXml += `<c r="J${r}" s="${sJ}" />`;
+        rowXml += `<c r="K${r}" s="${sK}" />`;
       }
 
-      rowXml += `<c r="L${r}" s="142" t="n" />`;
+      rowXml += `<c r="L${r}" s="${sL}" />`;
       rowXml += `</row>`;
       newSheet2Rows.push(rowXml);
     }
