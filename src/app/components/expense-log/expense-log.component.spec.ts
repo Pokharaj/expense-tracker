@@ -323,5 +323,27 @@ describe('ExpenseLogComponent', () => {
       expect(component.isFilterPanelOpen).toBeFalse();
       expect(fixture.nativeElement.querySelector('#expense-filter-panel')).toBeFalsy();
     });
+
+    it('should render date range filter inputs in a 2-column grid matching amount range filter', () => {
+      component.isFilterPanelOpen = true;
+      fixture.detectChanges();
+
+      const dateFrom = fixture.nativeElement.querySelector('#filter-date-from') as HTMLInputElement;
+      const dateTo = fixture.nativeElement.querySelector('#filter-date-to') as HTMLInputElement;
+      const minAmount = fixture.nativeElement.querySelector('#filter-min-amount') as HTMLInputElement;
+      const maxAmount = fixture.nativeElement.querySelector('#filter-max-amount') as HTMLInputElement;
+
+      expect(dateFrom).toBeTruthy();
+      expect(dateTo).toBeTruthy();
+      expect(minAmount).toBeTruthy();
+      expect(maxAmount).toBeTruthy();
+
+      // Verify that both date inputs share a 2-column grid container matching amount range
+      const dateContainer = dateFrom.parentElement as HTMLElement;
+      expect(dateContainer.classList.contains('grid-cols-2')).toBeTrue();
+
+      const amountContainer = minAmount.parentElement as HTMLElement;
+      expect(amountContainer.classList.contains('grid-cols-2')).toBeTrue();
+    });
   });
 });

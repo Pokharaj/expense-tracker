@@ -149,7 +149,7 @@ import { EXPENSE_CATEGORIES, INCOME_SOURCES, Expense, Income } from '../../model
             id="expense-filter-panel"
             class="px-3 pb-4 sm:px-6 pt-1 border-t border-slate-100 dark:border-slate-800/80 transition-all"
           >
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
               <!-- 1. Category / Source Filter -->
               <div>
                 <label [for]="activeTab === 'expenses' ? 'filter-category' : 'filter-source'" class="block font-semibold text-slate-600 dark:text-slate-300 mb-1">
@@ -207,32 +207,30 @@ import { EXPENSE_CATEGORIES, INCOME_SOURCES, Expense, Income } from '../../model
                 </div>
               </div>
 
-              <!-- 3. Date Range: From & To (Spans full width of filter card with generous spacing) -->
-              <div class="sm:col-span-2">
+              <!-- 3. Date Range: From & To -->
+              <div>
                 <label class="block font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Date Range
                 </label>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div class="flex items-center space-x-2">
-                    <span class="text-xs font-medium text-slate-500 dark:text-slate-400 w-10 shrink-0">From:</span>
-                    <input
-                      id="filter-date-from"
-                      type="date"
-                      [(ngModel)]="filters.dateFrom"
-                      class="flex-1 min-w-0 text-xs sm:text-sm px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 dark:[color-scheme:dark]"
-                      title="From Date"
-                    />
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <span class="text-xs font-medium text-slate-500 dark:text-slate-400 w-10 shrink-0">To:</span>
-                    <input
-                      id="filter-date-to"
-                      type="date"
-                      [(ngModel)]="filters.dateTo"
-                      class="flex-1 min-w-0 text-xs sm:text-sm px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 dark:[color-scheme:dark]"
-                      title="To Date"
-                    />
-                  </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <input
+                    id="filter-date-from"
+                    type="date"
+                    [(ngModel)]="filters.dateFrom"
+                    placeholder="From"
+                    title="From Date"
+                    aria-label="From Date"
+                    class="w-full text-xs sm:text-sm px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 dark:[color-scheme:dark]"
+                  />
+                  <input
+                    id="filter-date-to"
+                    type="date"
+                    [(ngModel)]="filters.dateTo"
+                    placeholder="To"
+                    title="To Date"
+                    aria-label="To Date"
+                    class="w-full text-xs sm:text-sm px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 dark:[color-scheme:dark]"
+                  />
                 </div>
               </div>
             </div>
